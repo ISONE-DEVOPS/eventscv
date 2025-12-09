@@ -1,0 +1,428 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================
+    // HELPER FUNCTIONS - AUTHENTICATION
+    // ============================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function getUserClaims() {
+      return request.auth.token;
+    }
+
+    // ============================================
+    // HELPER FUNCTIONS - PLATFORM ROLES
+    // ============================================
+
+    // Super Admin - Full platform access
+    function isSuperAdmin() {
+      return isAuthenticated() &&
+             getUserClaims().platformRole == 'super_admin';
+    }
+
+    // ============================================
+    // HELPER FUNCTIONS - ORGANIZATION ROLES
+    // ============================================
+
+    // Check if user belongs to a specific organization
+    function isOrgMember(orgId) {
+      return isAuthenticated() &&
+             getUserClaims().organizationId == orgId;
+    }
+
+    // Check organization role
+    function getOrgRole() {
+      return getUserClaims().organizationRole;
+    }
+
+    // Organization Admin - Full org access
+    function isOrgAdmin(orgId) {
+      return isOrgMember(orgId) && getOrgRole() == 'admin';
+    }
+
+    // Organization Promoter - Event management
+    function isOrgPromoter(orgId) {
+      return isOrgMember(orgId) &&
+             (getOrgRole() == 'admin' || getOrgRole() == 'promoter');
+    }
+
+    // Organization Staff - Limited access
+    function isOrgStaff(orgId) {
+      return isOrgMember(orgId) &&
+             (getOrgRole() == 'admin' || getOrgRole() == 'promoter' || getOrgRole() == 'staff');
+    }
+
+    // Check if user has specific permission
+    function hasPermission(permission) {
+      return isAuthenticated() &&
+             permission in getUserClaims().permissions;
+    }
+
+    // ============================================
+    // HELPER FUNCTIONS - EVENT ACCESS
+    // ============================================
+
+    function getEvent(eventId) {
+      return get(/databases/$(database)/documents/events/$(eventId));
+    }
+
+    function getEventOrgId(eventId) {
+      return getEvent(eventId).data.organizationId;
+    }
+
+    function canManageEvent(eventId) {
+      let orgId = getEventOrgId(eventId);
+      return isOrgPromoter(orgId) || isSuperAdmin();
+    }
+
+    function canReadEvent(eventId) {
+      let orgId = getEventOrgId(eventId);
+      return isOrgStaff(orgId) || isSuperAdmin();
+    }
+
+    // ============================================
+    // USERS COLLECTION
+    // ============================================
+
+    match /users/{userId} {
+      // Users can read their own profile, super admins can read all
+      allow read: if isOwner(userId) || isSuperAdmin();
+
+      // Users can create and update their own profile
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isSuperAdmin();
+
+      // Only super admins can delete users
+      allow delete: if isSuperAdmin();
+
+      // User's tickets subcollection
+      match /tickets/{ticketId} {
+        allow read: if isOwner(userId) || isSuperAdmin();
+        allow write: if false; // Cloud Functions only
+      }
+
+      // User's wallet transactions
+      match /walletTransactions/{txId} {
+        allow read: if isOwner(userId) || isSuperAdmin();
+        allow write: if false; // Cloud Functions only
+      }
+
+      // User's notifications
+      match /notifications/{notificationId} {
+        allow read: if isOwner(userId);
+        allow update: if isOwner(userId); // Mark as read
+        allow create, delete: if false; // Cloud Functions only
+      }
+    }
+
+    // ============================================
+    // ORGANIZATIONS COLLECTION
+    // ============================================
+
+    match /organizations/{orgId} {
+      // Public read for basic org info (name, logo, etc.)
+      // Full read for members and super admins
+      allow read: if true;
+
+      // Only super admins can create organizations
+      allow create: if isSuperAdmin();
+
+      // Org admins can update their org, super admins can update any
+      allow update: if isOrgAdmin(orgId) || isSuperAdmin();
+
+      // Only super admins can delete organizations
+      allow delete: if isSuperAdmin();
+
+      // ============================================
+      // ORGANIZATION MEMBERS SUBCOLLECTION
+      // ============================================
+
+      match /members/{memberId} {
+        // Members can see other members of their org
+        allow read: if isOrgMember(orgId) || isSuperAdmin();
+
+        // Only org admins can manage members
+        allow create: if isOrgAdmin(orgId) || isSuperAdmin();
+        allow update: if isOrgAdmin(orgId) || isSuperAdmin();
+        allow delete: if isOrgAdmin(orgId) || isSuperAdmin();
+      }
+
+      // ============================================
+      // ORGANIZATION INVITATIONS SUBCOLLECTION
+      // ============================================
+
+      match /invitations/{invitationId} {
+        // Org admins and super admins can read invitations
+        allow read: if isOrgAdmin(orgId) || isSuperAdmin();
+
+        // Org admins can create/update invitations
+        allow create: if isOrgAdmin(orgId) || isSuperAdmin();
+        allow update: if isOrgAdmin(orgId) || isSuperAdmin();
+        allow delete: if isOrgAdmin(orgId) || isSuperAdmin();
+      }
+
+      // ============================================
+      // ORGANIZATION PAYOUTS SUBCOLLECTION
+      // ============================================
+
+      match /payouts/{payoutId} {
+        // Org admins can read payouts
+        allow read: if isOrgAdmin(orgId) || isSuperAdmin();
+
+        // Only Cloud Functions can write payouts
+        allow write: if false;
+      }
+
+      // ============================================
+      // ORGANIZATION STATS SUBCOLLECTION
+      // ============================================
+
+      match /stats/{statId} {
+        allow read: if isOrgMember(orgId) || isSuperAdmin();
+        allow write: if false; // Cloud Functions only
+      }
+    }
+
+    // ============================================
+    // SUBSCRIPTIONS COLLECTION
+    // ============================================
+
+    match /subscriptions/{subscriptionId} {
+      allow read: if isAuthenticated() &&
+                    (resource.data.organizationId == getUserClaims().organizationId ||
+                     isSuperAdmin());
+      allow write: if false; // Cloud Functions only (Stripe webhooks)
+    }
+
+    // ============================================
+    // EVENTS COLLECTION
+    // ============================================
+
+    match /events/{eventId} {
+      // Published events are public, drafts only for org members
+      allow read: if resource.data.status == 'published' ||
+                    canReadEvent(eventId) ||
+                    isSuperAdmin();
+
+      // Promoters can create events for their org
+      allow create: if isOrgPromoter(request.resource.data.organizationId) ||
+                      isSuperAdmin();
+
+      // Promoters can update events
+      allow update: if canManageEvent(eventId) || isSuperAdmin();
+
+      // Only org admins and super admins can delete events
+      allow delete: if isOrgAdmin(getEventOrgId(eventId)) || isSuperAdmin();
+
+      // ============================================
+      // TICKET TYPES SUBCOLLECTION
+      // ============================================
+
+      match /ticketTypes/{typeId} {
+        // Public read for ticket types
+        allow read: if true;
+
+        // Promoters can manage ticket types
+        allow write: if canManageEvent(eventId) || isSuperAdmin();
+      }
+
+      // ============================================
+      // TICKETS SUBCOLLECTION
+      // ============================================
+
+      match /tickets/{ticketId} {
+        // Users can read their own tickets, org staff can read all
+        allow read: if isOwner(resource.data.userId) ||
+                      canReadEvent(eventId) ||
+                      isSuperAdmin();
+
+        // Only Cloud Functions can write tickets
+        allow write: if false;
+      }
+
+      // ============================================
+      // ORDERS SUBCOLLECTION
+      // ============================================
+
+      match /orders/{orderId} {
+        // Users can read their own orders, org members can read all
+        allow read: if isOwner(resource.data.userId) ||
+                      canReadEvent(eventId) ||
+                      isSuperAdmin();
+
+        // Authenticated users can create orders
+        allow create: if isAuthenticated();
+
+        // Only Cloud Functions can update/delete orders
+        allow update, delete: if false;
+      }
+
+      // ============================================
+      // CHECK-INS SUBCOLLECTION
+      // ============================================
+
+      match /checkins/{checkinId} {
+        // Org staff can read check-ins
+        allow read: if canReadEvent(eventId) || isSuperAdmin();
+
+        // Only Cloud Functions can write check-ins
+        allow write: if false;
+      }
+
+      // ============================================
+      // VENDORS SUBCOLLECTION
+      // ============================================
+
+      match /vendors/{vendorId} {
+        // Org staff can read vendors
+        allow read: if canReadEvent(eventId) || isSuperAdmin();
+
+        // Promoters can manage vendors
+        allow write: if canManageEvent(eventId) || isSuperAdmin();
+
+        // Vendor products
+        match /products/{productId} {
+          allow read: if true;
+          allow write: if canManageEvent(eventId) || isSuperAdmin();
+        }
+      }
+
+      // ============================================
+      // NFC WRISTBANDS SUBCOLLECTION
+      // ============================================
+
+      match /wristbands/{wristbandId} {
+        // Users can read their own wristband, staff can read all
+        allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) ||
+                      canReadEvent(eventId) ||
+                      isSuperAdmin();
+
+        // Only Cloud Functions can write
+        allow write: if false;
+      }
+
+      // ============================================
+      // CASHLESS TRANSACTIONS SUBCOLLECTION
+      // ============================================
+
+      match /cashlessTransactions/{transactionId} {
+        // Org staff can read transactions
+        allow read: if canReadEvent(eventId) || isSuperAdmin();
+
+        // Only Cloud Functions can write
+        allow write: if false;
+      }
+
+      // ============================================
+      // EVENT STATS SUBCOLLECTION
+      // ============================================
+
+      match /stats/{statId} {
+        allow read: if canReadEvent(eventId) || isSuperAdmin();
+        allow write: if false; // Cloud Functions only
+      }
+    }
+
+    // ============================================
+    // REWARDS COLLECTION
+    // ============================================
+
+    match /rewards/{rewardId} {
+      // Active rewards are public
+      allow read: if resource.data.isActive == true || isSuperAdmin();
+
+      // Only super admins can manage rewards
+      allow write: if isSuperAdmin();
+    }
+
+    // ============================================
+    // REWARD REDEMPTIONS COLLECTION
+    // ============================================
+
+    match /rewardRedemptions/{redemptionId} {
+      // Users can read their own redemptions
+      allow read: if isOwner(resource.data.userId) || isSuperAdmin();
+
+      // Only Cloud Functions can write
+      allow write: if false;
+    }
+
+    // ============================================
+    // REFERRALS COLLECTION
+    // ============================================
+
+    match /referrals/{referralId} {
+      allow read: if isAuthenticated() &&
+                    (resource.data.referrerId == request.auth.uid ||
+                     resource.data.referredId == request.auth.uid) ||
+                    isSuperAdmin();
+      allow write: if false; // Cloud Functions only
+    }
+
+    // ============================================
+    // AUDIT LOGS COLLECTION (Super Admin only)
+    // ============================================
+
+    match /auditLogs/{logId} {
+      allow read: if isSuperAdmin();
+      allow write: if false; // Cloud Functions only
+    }
+
+    // ============================================
+    // PLATFORM STATS COLLECTION (Super Admin only)
+    // ============================================
+
+    match /platformStats/{statId} {
+      allow read: if isSuperAdmin();
+      allow write: if false; // Cloud Functions only
+    }
+
+    // ============================================
+    // SUPPORT TICKETS COLLECTION
+    // ============================================
+
+    match /supportTickets/{ticketId} {
+      // Users can read their own tickets, super admins can read all
+      allow read: if isOwner(resource.data.userId) || isSuperAdmin();
+
+      // Users can create tickets
+      allow create: if isAuthenticated();
+
+      // Users can update their own tickets (add messages), super admins can update any
+      allow update: if isOwner(resource.data.userId) || isSuperAdmin();
+
+      // Only super admins can delete
+      allow delete: if isSuperAdmin();
+
+      // Ticket messages subcollection
+      match /messages/{messageId} {
+        allow read: if isOwner(get(/databases/$(database)/documents/supportTickets/$(ticketId)).data.userId) ||
+                      isSuperAdmin();
+        allow create: if isAuthenticated();
+        allow update, delete: if false;
+      }
+    }
+
+    // ============================================
+    // SYSTEM CONFIG COLLECTION (Super Admin only)
+    // ============================================
+
+    match /systemConfig/{configId} {
+      allow read: if isSuperAdmin();
+      allow write: if isSuperAdmin();
+
+      match /{document=**} {
+        allow read: if isSuperAdmin();
+        allow write: if isSuperAdmin();
+      }
+    }
+  }
+}
