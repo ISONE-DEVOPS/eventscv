@@ -17,6 +17,9 @@ importers:
       eslint:
         specifier: ^8.56.0
         version: 8.57.1
+      firebase-admin:
+        specifier: ^13.6.0
+        version: 13.6.0
       husky:
         specifier: ^8.0.0
         version: 8.0.3

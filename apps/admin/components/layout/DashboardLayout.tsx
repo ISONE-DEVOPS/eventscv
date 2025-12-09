@@ -9,7 +9,7 @@ import { useAuthStore, isSuperAdmin } from '@/stores/authStore';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { cn } from '@/lib/utils';
-import type { Organization } from '@eventscv/shared-types';
+import type { Organization, Permission } from '@eventscv/shared-types';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -47,7 +47,7 @@ export function DashboardLayout({
         platformRole: tokenResult.claims.platformRole as 'super_admin' | undefined,
         organizationId: tokenResult.claims.organizationId as string | undefined,
         organizationRole: tokenResult.claims.organizationRole as 'admin' | 'promoter' | 'staff' | undefined,
-        permissions: tokenResult.claims.permissions as string[] | undefined,
+        permissions: tokenResult.claims.permissions as Permission[] | undefined,
       };
       setClaims(userClaims);
 

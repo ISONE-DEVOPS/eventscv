@@ -64,3 +64,4 @@ apps/mobile/.flutter-plugins-dependencies
 tmp/
 temp/
 *.tmp
+serviceAccountKey.json
