@@ -19,6 +19,7 @@ import {
   Wallet,
   Bell,
   Package,
+  QrCode,
 } from 'lucide-react';
 import { useAuthStore, isSuperAdmin, isOrgAdmin, isOrgPromoter } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
@@ -75,6 +76,7 @@ const orgNav: NavSection[] = [
       { label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={20} /> },
       { label: 'Eventos', href: '/events', icon: <Calendar size={20} />, roles: ['admin', 'promoter'] },
       { label: 'Bilhetes', href: '/tickets', icon: <Ticket size={20} /> },
+      { label: 'Check-in', href: '/check-in', icon: <QrCode size={20} /> },
     ],
   },
   {
