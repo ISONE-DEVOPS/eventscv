@@ -197,7 +197,7 @@ export default function HomePage() {
             </div>
 
             {/* Category Pills */}
-            <div className="flex flex-wrap items-center justify-center gap-3 animate-fade-in-up delay-300">
+            <div className="flex flex-wrap items-center justify-center gap-3 mb-10 animate-fade-in-up delay-300">
               {categories.map((cat) => (
                 <Link
                   key={cat.name}
@@ -212,6 +212,26 @@ export default function HomePage() {
                   </span>
                 </Link>
               ))}
+            </div>
+
+            {/* CTA for Organizers */}
+            <div className="animate-fade-in-up delay-400">
+              <div className="inline-flex flex-col sm:flex-row items-center gap-4">
+                <Link
+                  href="/auth/register"
+                  className="group relative overflow-hidden px-8 py-4 bg-gradient-primary rounded-full font-semibold text-white shadow-glow-sm hover:shadow-glow-md transition-all duration-300 transform hover:scale-105"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
+                  <span className="relative flex items-center gap-2">
+                    <Sparkles className="h-5 w-5" />
+                    Cria o seu primeiro Evento
+                    <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </span>
+                </Link>
+                <p className="text-sm text-zinc-500">
+                  Grátis · Sem cartão de crédito · 2 minutos
+                </p>
+              </div>
             </div>
           </div>
         </div>
