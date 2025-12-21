@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Modal } from '../ui/Modal';
+import { functions } from '../../lib/firebase';
+import { httpsCallable } from 'firebase/functions';
 
 interface CustomField {
   id: string;
@@ -47,29 +49,21 @@ export function GuestRegistrationModal({
       const urlParams = new URLSearchParams(window.location.search);
       const source = urlParams.get('src') || 'web';
 
-      const response = await fetch('/api/registration', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          eventId,
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          customFieldResponses: data.customFields || {},
-          demographics: {
-            ageRange: data.ageRange,
-            gender: data.gender,
-            island: data.island,
-          },
-          source,
-        }),
+      // Chamar Cloud Function diretamente
+      const createGuestRegistration = httpsCallable(functions, 'createGuestRegistration');
+      const result = await createGuestRegistration({
+        eventId,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        customFieldResponses: data.customFields || {},
+        demographics: {
+          ageRange: data.ageRange,
+          gender: data.gender,
+          island: data.island,
+        },
+        source,
       });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Erro ao realizar registo');
-      }
 
       setSubmitSuccess(true);
       reset();

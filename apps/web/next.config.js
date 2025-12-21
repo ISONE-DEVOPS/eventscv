@@ -1,8 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'export',
   reactStrictMode: true,
   transpilePackages: ['@eventscv/shared-types', '@eventscv/ui-components'],
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
@@ -22,7 +24,7 @@ const nextConfig = {
       },
     ],
   },
-  turbopack: {},
+  trailingSlash: true,
 };
 
 module.exports = nextConfig;
