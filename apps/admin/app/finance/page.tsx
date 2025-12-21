@@ -38,7 +38,7 @@ import {
 } from 'lucide-react';
 
 export default function FinancePage() {
-  const { claims } = useAuthStore();
+  const { claims, user } = useAuthStore();
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [stats, setStats] = useState<FinanceStats | null>(null);
@@ -107,6 +107,8 @@ export default function FinancePage() {
       await requestPayout(claims.organizationId, {
         amount,
         method: payoutMethod as 'bank_transfer' | 'mobile_money',
+        requestedBy: user?.uid || '',
+        requestedByName: user?.displayName || user?.email || 'Unknown',
       });
 
       await loadData();
@@ -127,7 +129,7 @@ export default function FinancePage() {
 
     setIsCanceling(true);
     try {
-      await cancelPayout(claims.organizationId, payoutToCancel.id);
+      await cancelPayout(claims.organizationId, payoutToCancel.id, 'Cancelado pelo utilizador');
       await loadData();
       setCancelModalOpen(false);
       setPayoutToCancel(null);
@@ -177,7 +179,7 @@ export default function FinancePage() {
       sortable: true,
       render: (payout) => (
         <span className="text-sm text-gray-500">
-          {payout.createdAt.toLocaleDateString('pt-PT', {
+          {payout.requestedAt.toLocaleDateString('pt-PT', {
             day: '2-digit',
             month: 'short',
             year: 'numeric',
@@ -220,13 +222,13 @@ export default function FinancePage() {
       header: 'Tipo',
       render: (transaction) => (
         <div className="flex items-center gap-2">
-          {transaction.type === 'sale' ? (
+          {transaction.type === 'ticket_sale' ? (
             <ArrowDown className="h-4 w-4 text-green-500" />
           ) : (
             <ArrowUp className="h-4 w-4 text-red-500" />
           )}
           <span className="text-gray-600">
-            {transaction.type === 'sale'
+            {transaction.type === 'ticket_sale'
               ? 'Venda'
               : transaction.type === 'refund'
                 ? 'Reembolso'
@@ -242,10 +244,10 @@ export default function FinancePage() {
       header: 'Valor',
       render: (transaction) => (
         <span
-          className={`font-bold ${transaction.type === 'sale' ? 'text-green-600' : 'text-red-600'
+          className={`font-bold ${transaction.type === 'ticket_sale' ? 'text-green-600' : 'text-red-600'
             }`}
         >
-          {transaction.type === 'sale' ? '+' : '-'}
+          {transaction.type === 'ticket_sale' ? '+' : '-'}
           {transaction.amount.toLocaleString('pt-PT')} CVE
         </span>
       ),
@@ -338,18 +340,18 @@ export default function FinancePage() {
             />
             <StatCard
               title="Pendente"
-              value={`${stats.pendingBalance.toLocaleString('pt-PT')} CVE`}
+              value={`${stats.pendingPayouts.toLocaleString('pt-PT')} CVE`}
               icon={<Clock className="h-6 w-6" />}
             />
             <StatCard
               title="Total de Vendas"
-              value={`${stats.totalSales.toLocaleString('pt-PT')} CVE`}
+              value={`${stats.totalRevenue.toLocaleString('pt-PT')} CVE`}
               icon={<DollarSign className="h-6 w-6" />}
               change={{ value: 12.5, label: 'este mês' }}
             />
             <StatCard
               title="Levantado"
-              value={`${stats.totalWithdrawn.toLocaleString('pt-PT')} CVE`}
+              value={`${(stats.totalRefunds || 0).toLocaleString('pt-PT')} CVE`}
               icon={<ArrowUp className="h-6 w-6" />}
             />
           </div>
@@ -362,11 +364,11 @@ export default function FinancePage() {
               <div>
                 <p className="text-purple-200">Saldo Total</p>
                 <p className="text-4xl font-bold mt-2">
-                  {(stats.availableBalance + stats.pendingBalance).toLocaleString('pt-PT')} CVE
+                  {(stats.availableBalance + stats.pendingPayouts).toLocaleString('pt-PT')} CVE
                 </p>
                 <p className="text-purple-200 mt-2">
                   {stats.availableBalance.toLocaleString('pt-PT')} CVE disponível •{' '}
-                  {stats.pendingBalance.toLocaleString('pt-PT')} CVE pendente
+                  {stats.pendingPayouts.toLocaleString('pt-PT')} CVE pendente
                 </p>
               </div>
               <div className="text-right">
