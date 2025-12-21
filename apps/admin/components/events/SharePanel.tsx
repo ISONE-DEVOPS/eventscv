@@ -1,6 +1,6 @@
 'use client';
 
-import { Modal } from '../ui/Modal';
+import Modal from '../ui/Modal';
 import { QRCodeDisplay } from './QRCodeDisplay';
 import { Mail, MessageCircle, Facebook, Instagram, Share2 } from 'lucide-react';
 import { type Event } from '../../lib/services/events';

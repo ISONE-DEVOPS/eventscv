@@ -1,13 +1,28 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
   reactStrictMode: true,
   transpilePackages: ['@eventscv/shared-types', '@eventscv/ui-components'],
   images: {
-    domains: ['firebasestorage.googleapis.com', 'storage.googleapis.com', 'lh3.googleusercontent.com', 'images.unsplash.com'],
-    unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'firebasestorage.googleapis.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'storage.googleapis.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
+    ],
   },
-  trailingSlash: true,
+  turbopack: {},
 };
 
 module.exports = nextConfig;

@@ -124,7 +124,7 @@ export default function EventDetailClient() {
   });
 
   // Use Firebase data if available, otherwise use mock data
-  const event = firebaseEvent || mockEventData;
+  const event = (firebaseEvent || mockEventData) as any;
 
   const [selectedTickets, setSelectedTickets] = useState<Record<string, number>>({});
   const [isFavorite, setIsFavorite] = useState(false);
@@ -168,7 +168,7 @@ export default function EventDetailClient() {
   const updateTicketQuantity = (ticketId: string, delta: number) => {
     setSelectedTickets((prev) => {
       const current = prev[ticketId] || 0;
-      const ticket = eventData.tickets.find((t) => t.id === ticketId);
+      const ticket = (event as any).tickets?.find((t: any) => t.id === ticketId);
       const max = ticket?.perPersonLimit || 5;
       const newValue = Math.max(0, Math.min(max, current + delta));
       return { ...prev, [ticketId]: newValue };
@@ -176,7 +176,7 @@ export default function EventDetailClient() {
   };
 
   const totalPrice = Object.entries(selectedTickets).reduce((sum, [ticketId, quantity]) => {
-    const ticket = eventData.tickets.find((t) => t.id === ticketId);
+    const ticket = (event as any).tickets?.find((t: any) => t.id === ticketId);
     return sum + (ticket?.price || 0) * quantity;
   }, 0);
 
@@ -222,8 +222,8 @@ export default function EventDetailClient() {
       {/* Hero Image */}
       <div className="relative h-[50vh] min-h-[400px]">
         <Image
-          src={eventData.image}
-          alt={eventData.title}
+          src={event.image}
+          alt={event.title}
           fill
           className="object-cover"
           priority
@@ -232,13 +232,13 @@ export default function EventDetailClient() {
 
         {/* Badges */}
         <div className="absolute top-20 left-4 flex items-center gap-2">
-          {eventData.isHot && (
+          {event.isHot && (
             <span className="badge-hot">
               <Zap className="h-3 w-3" />
               HOT
             </span>
           )}
-          <span className="badge-glass">{eventData.category}</span>
+          <span className="badge-glass">{event.category}</span>
         </div>
       </div>
 
@@ -249,24 +249,24 @@ export default function EventDetailClient() {
             {/* Event Info */}
             <div className="glass-card p-6 md:p-8">
               <h1 className="heading-display text-2xl sm:text-3xl md:text-4xl mb-4">
-                {eventData.title}
+                {event.title}
               </h1>
 
               <div className="flex flex-wrap gap-4 mb-6">
                 <div className="flex items-center gap-2 text-brand-accent">
                   <Calendar className="h-5 w-5" />
                   <span>
-                    {formatShortDate(eventData.date)}
-                    {eventData.endDate && ` - ${formatShortDate(eventData.endDate)}`}
+                    {formatShortDate(event.date)}
+                    {event.endDate && ` - ${formatShortDate(event.endDate)}`}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-zinc-400">
                   <Clock className="h-5 w-5" />
-                  <span>{eventData.time} - {eventData.endTime}</span>
+                  <span>{event.time} - {event.endTime}</span>
                 </div>
                 <div className="flex items-center gap-2 text-zinc-400">
                   <MapPin className="h-5 w-5" />
-                  <span>{eventData.city}</span>
+                  <span>{event.city}</span>
                 </div>
               </div>
 
@@ -275,13 +275,13 @@ export default function EventDetailClient() {
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1 text-yellow-400">
                     <Star className="h-5 w-5 fill-current" />
-                    <span className="font-semibold">{eventData.rating}</span>
+                    <span className="font-semibold">{event.rating}</span>
                   </div>
-                  <span className="text-zinc-500">({eventData.reviewsCount} avaliações)</span>
+                  <span className="text-zinc-500">({event.reviewsCount} avaliações)</span>
                 </div>
                 <div className="flex items-center gap-2 text-zinc-400">
                   <Users className="h-5 w-5" />
-                  <span>{eventData.attendees.toLocaleString()} confirmados</span>
+                  <span>{event.attendees.toLocaleString()} confirmados</span>
                 </div>
               </div>
 
@@ -289,7 +289,7 @@ export default function EventDetailClient() {
               <div className="pt-6">
                 <h2 className="font-display font-semibold text-xl mb-4">Sobre o Evento</h2>
                 <p className="text-zinc-400 whitespace-pre-line leading-relaxed">
-                  {eventData.description}
+                  {event.description}
                 </p>
               </div>
             </div>
@@ -298,7 +298,7 @@ export default function EventDetailClient() {
             <div className="glass-card p-6 md:p-8">
               <h2 className="font-display font-semibold text-xl mb-6">Lineup</h2>
               <div className="space-y-3">
-                {eventData.lineup.map((artist, index) => (
+                {event.lineup.map((artist: any, index: number) => (
                   <div
                     key={index}
                     className="flex items-center justify-between p-4 rounded-xl bg-background-secondary hover:bg-background-tertiary transition-colors"
@@ -327,8 +327,8 @@ export default function EventDetailClient() {
                 </div>
               </div>
               <div className="space-y-2">
-                <p className="font-semibold text-white">{eventData.location}</p>
-                <p className="text-zinc-400">{eventData.address}</p>
+                <p className="font-semibold text-white">{event.location}</p>
+                <p className="text-zinc-400">{event.address}</p>
               </div>
             </div>
 
@@ -336,7 +336,7 @@ export default function EventDetailClient() {
             <div className="glass-card p-6 md:p-8">
               <h2 className="font-display font-semibold text-xl mb-6">O que está incluído</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {eventData.features.map((feature, index) => (
+                {event.features.map((feature: any, index: number) => (
                   <div
                     key={index}
                     className="flex items-center gap-3 p-3 rounded-xl bg-background-secondary"
@@ -357,16 +357,16 @@ export default function EventDetailClient() {
                 <div className="flex items-center gap-4">
                   <div className="relative w-14 h-14 rounded-full overflow-hidden">
                     <Image
-                      src={eventData.organizer.image}
-                      alt={eventData.organizer.name}
+                      src={event.organizer.image}
+                      alt={event.organizer.name}
                       fill
                       className="object-cover"
                     />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <p className="font-semibold text-white">{eventData.organizer.name}</p>
-                      {eventData.organizer.verified && (
+                      <p className="font-semibold text-white">{event.organizer.name}</p>
+                      {event.organizer.verified && (
                         <span className="w-5 h-5 rounded-full bg-brand-accent flex items-center justify-center">
                           <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -374,7 +374,7 @@ export default function EventDetailClient() {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-zinc-500">{eventData.organizer.eventsCount} eventos organizados</p>
+                    <p className="text-sm text-zinc-500">{event.organizer.eventsCount} eventos organizados</p>
                   </div>
                 </div>
                 <button className="btn btn-ghost btn-sm">
@@ -391,7 +391,7 @@ export default function EventDetailClient() {
               <h2 className="font-display font-semibold text-xl mb-6">Selecionar Bilhetes</h2>
 
               <div className="space-y-4 mb-6">
-                {eventData.tickets.map((ticket) => (
+                {event.tickets.map((ticket: any) => (
                   <div
                     key={ticket.id}
                     className={`p-4 rounded-xl border transition-all ${
@@ -460,7 +460,7 @@ export default function EventDetailClient() {
               )}
 
               <Link
-                href={totalTickets > 0 ? `/checkout?event=${eventData.id}` : '#'}
+                href={totalTickets > 0 ? `/checkout?event=${event.id}` : '#'}
                 className={`btn w-full ${totalTickets > 0 ? 'btn-primary' : 'btn-ghost opacity-50 cursor-not-allowed'}`}
               >
                 <Ticket className="h-5 w-5" />
