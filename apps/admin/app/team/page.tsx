@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import DashboardLayout from '../../components/layout/DashboardLayout';
+import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import {
   DataTable,
   Button,
@@ -25,21 +25,21 @@ import {
   type TeamMember,
   type Invitation,
 } from '../../lib/services/team';
-import { useAuthStore } from '../../lib/store/auth';
+import { useAuthStore } from '@/stores/authStore';
 import {
-  PlusIcon,
-  UserGroupIcon,
-  EnvelopeIcon,
-  TrashIcon,
-  PencilIcon,
-  ArrowPathIcon,
-  XMarkIcon,
-} from '@heroicons/react/24/outline';
+  Plus,
+  Users,
+  Mail,
+  Trash2,
+  Pencil,
+  RefreshCw,
+  X,
+} from 'lucide-react';
 
 type OrganizationRole = 'admin' | 'promoter' | 'staff';
 
 export default function TeamPage() {
-  const { user } = useAuthStore();
+  const { user, claims } = useAuthStore();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -69,16 +69,16 @@ export default function TeamPage() {
 
   useEffect(() => {
     loadData();
-  }, [user]);
+  }, [claims]);
 
   const loadData = async () => {
-    if (!user?.organizationId) return;
+    if (!claims?.organizationId) return;
 
     setIsLoading(true);
     try {
       const [membersData, invitationsData] = await Promise.all([
-        getTeamMembers(user.organizationId),
-        getInvitations(user.organizationId),
+        getTeamMembers(claims.organizationId),
+        getInvitations(claims.organizationId),
       ]);
 
       setMembers(membersData);
@@ -91,16 +91,16 @@ export default function TeamPage() {
   };
 
   const handleInvite = async () => {
-    if (!user?.organizationId || !inviteEmail) return;
+    if (!claims?.organizationId || !inviteEmail) return;
 
     setIsInviting(true);
     setInviteError('');
 
     try {
-      await createInvitation(user.organizationId, {
+      await createInvitation(claims.organizationId, {
         email: inviteEmail,
         role: inviteRole,
-        invitedBy: user.uid,
+        invitedBy: user?.uid || '',
       });
 
       await loadData();
@@ -117,11 +117,11 @@ export default function TeamPage() {
   };
 
   const handleEditMember = async () => {
-    if (!memberToEdit || !user?.organizationId) return;
+    if (!memberToEdit || !claims?.organizationId) return;
 
     setIsEditing(true);
     try {
-      await updateTeamMember(user.organizationId, memberToEdit.id, {
+      await updateTeamMember(claims.organizationId, memberToEdit.id, {
         role: editRole,
         permissions: ROLE_PERMISSIONS[editRole],
       });
@@ -137,11 +137,11 @@ export default function TeamPage() {
   };
 
   const handleRemoveMember = async () => {
-    if (!memberToRemove || !user?.organizationId) return;
+    if (!memberToRemove || !claims?.organizationId) return;
 
     setIsRemoving(true);
     try {
-      await removeTeamMember(user.organizationId, memberToRemove.id);
+      await removeTeamMember(claims.organizationId, memberToRemove.id);
       await loadData();
       setRemoveModalOpen(false);
       setMemberToRemove(null);
@@ -153,11 +153,11 @@ export default function TeamPage() {
   };
 
   const handleCancelInvitation = async () => {
-    if (!invitationToCancel || !user?.organizationId) return;
+    if (!invitationToCancel || !claims?.organizationId) return;
 
     setIsCanceling(true);
     try {
-      await cancelInvitation(user.organizationId, invitationToCancel.id);
+      await cancelInvitation(claims.organizationId, invitationToCancel.id);
       await loadData();
       setCancelModalOpen(false);
       setInvitationToCancel(null);
@@ -230,7 +230,7 @@ export default function TeamPage() {
             className="p-2 hover:bg-gray-100 rounded-lg"
             title="Editar"
           >
-            <PencilIcon className="h-4 w-4 text-gray-500" />
+            <Pencil className="h-4 w-4 text-gray-500" />
           </button>
           <button
             onClick={() => {
@@ -240,7 +240,7 @@ export default function TeamPage() {
             className="p-2 hover:bg-red-50 rounded-lg"
             title="Remover"
           >
-            <TrashIcon className="h-4 w-4 text-red-500" />
+            <Trash2 className="h-4 w-4 text-red-500" />
           </button>
         </div>
       ),
@@ -254,7 +254,7 @@ export default function TeamPage() {
       render: (invitation) => (
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
-            <EnvelopeIcon className="h-5 w-5 text-gray-400" />
+            <Mail className="h-5 w-5 text-gray-400" />
           </div>
           <span className="text-gray-900">{invitation.email}</span>
         </div>
@@ -299,7 +299,7 @@ export default function TeamPage() {
             className="p-2 hover:bg-red-50 rounded-lg"
             title="Cancelar"
           >
-            <XMarkIcon className="h-4 w-4 text-red-500" />
+            <X className="h-4 w-4 text-red-500" />
           </button>
         ),
     },
@@ -324,13 +324,13 @@ export default function TeamPage() {
             <Button
               variant="outline"
               onClick={loadData}
-              leftIcon={<ArrowPathIcon className="h-5 w-5" />}
+              leftIcon={<RefreshCw className="h-5 w-5" />}
             >
               Atualizar
             </Button>
             <Button
               onClick={() => setInviteModalOpen(true)}
-              leftIcon={<PlusIcon className="h-5 w-5" />}
+              leftIcon={<Plus className="h-5 w-5" />}
             >
               Convidar Membro
             </Button>
@@ -342,7 +342,7 @@ export default function TeamPage() {
           <Card>
             <div className="flex items-center gap-4">
               <div className="p-3 bg-purple-100 rounded-lg">
-                <UserGroupIcon className="h-6 w-6 text-purple-600" />
+                <Users className="h-6 w-6 text-purple-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{members.length}</p>
@@ -353,7 +353,7 @@ export default function TeamPage() {
           <Card>
             <div className="flex items-center gap-4">
               <div className="p-3 bg-yellow-100 rounded-lg">
-                <EnvelopeIcon className="h-6 w-6 text-yellow-600" />
+                <Mail className="h-6 w-6 text-yellow-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">
@@ -366,7 +366,7 @@ export default function TeamPage() {
           <Card>
             <div className="flex items-center gap-4">
               <div className="p-3 bg-green-100 rounded-lg">
-                <UserGroupIcon className="h-6 w-6 text-green-600" />
+                <Users className="h-6 w-6 text-green-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import DashboardLayout from '../../components/layout/DashboardLayout';
+import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { DataTable, Button, StatusBadge, ConfirmModal, Card, StatCard } from '../../components/ui';
 import type { Column } from '../../components/ui';
 import {
@@ -13,20 +13,20 @@ import {
   type TicketFilters,
   type TicketStats,
 } from '../../lib/services/tickets';
-import { useAuthStore } from '../../lib/store/auth';
+import { useAuthStore } from '@/stores/authStore';
 import {
-  TicketIcon,
-  MagnifyingGlassIcon,
-  ArrowPathIcon,
-  EyeIcon,
-  ReceiptRefundIcon,
-  QrCodeIcon,
-  CurrencyDollarIcon,
-  CheckCircleIcon,
-} from '@heroicons/react/24/outline';
+  Ticket as TicketIcon,
+  Search,
+  RefreshCw,
+  Eye,
+  RotateCcw,
+  QrCode,
+  DollarSign,
+  CheckCircle,
+} from 'lucide-react';
 
 export default function TicketsPage() {
-  const { user } = useAuthStore();
+  const { claims } = useAuthStore();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [stats, setStats] = useState<TicketStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,15 +43,15 @@ export default function TicketsPage() {
 
   useEffect(() => {
     loadData();
-  }, [statusFilter, eventFilter, user]);
+  }, [statusFilter, eventFilter, claims]);
 
   const loadData = async () => {
-    if (!user?.organizationId) return;
+    if (!claims?.organizationId) return;
 
     setIsLoading(true);
     try {
       const filters: TicketFilters = {
-        organizationId: user.organizationId,
+        organizationId: claims.organizationId,
       };
 
       if (statusFilter) {
@@ -64,7 +64,7 @@ export default function TicketsPage() {
 
       const [ticketsResult, statsResult] = await Promise.all([
         getTickets(filters, { pageSize: 200 }),
-        getTicketStats(user.organizationId),
+        getTicketStats(claims.organizationId),
       ]);
 
       setTickets(ticketsResult.tickets);
@@ -118,7 +118,7 @@ export default function TicketsPage() {
       header: 'Código',
       render: (ticket) => (
         <div className="flex items-center gap-2">
-          <QrCodeIcon className="h-4 w-4 text-gray-400" />
+          <QrCode className="h-4 w-4 text-gray-400" />
           <span className="font-mono text-sm">{ticket.qrCode.slice(0, 12)}...</span>
         </div>
       ),
@@ -180,7 +180,7 @@ export default function TicketsPage() {
         <div className="flex items-center gap-1">
           <Link href={`/tickets/${ticket.id}`}>
             <button className="p-2 hover:bg-gray-100 rounded-lg" title="Ver detalhes">
-              <EyeIcon className="h-4 w-4 text-gray-500" />
+              <Eye className="h-4 w-4 text-gray-500" />
             </button>
           </Link>
           {ticket.status === 'valid' && (
@@ -192,7 +192,7 @@ export default function TicketsPage() {
               className="p-2 hover:bg-red-50 rounded-lg"
               title="Reembolsar"
             >
-              <ReceiptRefundIcon className="h-4 w-4 text-red-500" />
+              <RotateCcw className="h-4 w-4 text-red-500" />
             </button>
           )}
         </div>
@@ -212,7 +212,7 @@ export default function TicketsPage() {
           <Button
             variant="outline"
             onClick={loadData}
-            leftIcon={<ArrowPathIcon className="h-5 w-5" />}
+            leftIcon={<RefreshCw className="h-5 w-5" />}
           >
             Atualizar
           </Button>
@@ -224,17 +224,17 @@ export default function TicketsPage() {
             <StatCard
               title="Total Vendidos"
               value={stats.totalSold.toLocaleString('pt-PT')}
-              icon={<TicketIcon className="h-6 w-6" />}
+              icon={<TicketIcon size={24} />}
             />
             <StatCard
               title="Receita Total"
               value={`${stats.totalRevenue.toLocaleString('pt-PT')} CVE`}
-              icon={<CurrencyDollarIcon className="h-6 w-6" />}
+              icon={<DollarSign size={24} />}
             />
             <StatCard
               title="Check-ins"
               value={stats.checkedIn.toLocaleString('pt-PT')}
-              icon={<CheckCircleIcon className="h-6 w-6" />}
+              icon={<CheckCircle size={24} />}
               change={{
                 value: stats.totalSold > 0 ? (stats.checkedIn / stats.totalSold) * 100 : 0,
                 label: 'taxa',
@@ -243,7 +243,7 @@ export default function TicketsPage() {
             <StatCard
               title="Pendentes"
               value={stats.pending.toLocaleString('pt-PT')}
-              icon={<TicketIcon className="h-6 w-6" />}
+              icon={<TicketIcon size={24} />}
             />
           </div>
         )}

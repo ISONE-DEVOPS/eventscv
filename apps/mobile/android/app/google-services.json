@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "77875768716",
+    "project_id": "eventscv-platform",
+    "storage_bucket": "eventscv-platform.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:77875768716:android:53318c722027ba9fddbaa9",
+        "android_client_info": {
+          "package_name": "com.example.eveno"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "77875768716-1nr22j5c2n56rka57jm8lh9m1b4cfg2q.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD2lnCHigCFypeGaSImxIvRd-3nksqbEk4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "77875768716-1nr22j5c2n56rka57jm8lh9m1b4cfg2q.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

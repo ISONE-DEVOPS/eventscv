@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import DashboardLayout from '../../components/layout/DashboardLayout';
+import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { Card, StatCard, Button, Select, ListCard } from '../../components/ui';
 import {
   getOrganizationAnalytics,
@@ -9,20 +9,20 @@ import {
   type OrganizationAnalytics,
   type DashboardStats,
 } from '../../lib/services/analytics';
-import { useAuthStore } from '../../lib/store/auth';
+import { useAuthStore } from '@/stores/authStore';
 import {
-  ArrowPathIcon,
-  ArrowDownTrayIcon,
-  CalendarIcon,
-  CurrencyDollarIcon,
-  TicketIcon,
-  UserGroupIcon,
-  ChartBarIcon,
-  TrophyIcon,
-} from '@heroicons/react/24/outline';
+  RefreshCw,
+  Download,
+  Calendar,
+  DollarSign,
+  Ticket,
+  Users,
+  BarChart3,
+  Trophy,
+} from 'lucide-react';
 
 export default function AnalyticsPage() {
-  const { user } = useAuthStore();
+  const { claims } = useAuthStore();
   const [analytics, setAnalytics] = useState<OrganizationAnalytics | null>(null);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,10 +30,10 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     loadAnalytics();
-  }, [user, dateRange]);
+  }, [claims, dateRange]);
 
   const loadAnalytics = async () => {
-    if (!user?.organizationId) return;
+    if (!claims?.organizationId) return;
 
     setIsLoading(true);
     try {
@@ -58,8 +58,8 @@ export default function AnalyticsPage() {
       }
 
       const [analyticsData, statsData] = await Promise.all([
-        getOrganizationAnalytics(user.organizationId, { startDate, endDate: now }),
-        getDashboardStats(user.organizationId),
+        getOrganizationAnalytics(claims.organizationId, { startDate, endDate: now }),
+        getDashboardStats(claims.organizationId),
       ]);
 
       setAnalytics(analyticsData);
@@ -96,13 +96,13 @@ export default function AnalyticsPage() {
             <Button
               variant="outline"
               onClick={loadAnalytics}
-              leftIcon={<ArrowPathIcon className="h-5 w-5" />}
+              leftIcon={<RefreshCw size={20} />}
             >
               Atualizar
             </Button>
             <Button
               variant="outline"
-              leftIcon={<ArrowDownTrayIcon className="h-5 w-5" />}
+              leftIcon={<Download size={20} />}
             >
               Exportar
             </Button>
@@ -115,28 +115,28 @@ export default function AnalyticsPage() {
             <StatCard
               title="Receita Total"
               value={`${dashboardStats.totalRevenue.toLocaleString('pt-PT')} CVE`}
-              icon={<CurrencyDollarIcon className="h-6 w-6" />}
+              icon={<DollarSign size={24} />}
               change={{ value: dashboardStats.revenueChange, label: 'vs. período anterior' }}
               loading={isLoading}
             />
             <StatCard
               title="Bilhetes Vendidos"
               value={dashboardStats.ticketsSold.toLocaleString('pt-PT')}
-              icon={<TicketIcon className="h-6 w-6" />}
+              icon={<Ticket size={24} />}
               change={{ value: dashboardStats.ticketsChange, label: 'vs. período anterior' }}
               loading={isLoading}
             />
             <StatCard
               title="Eventos Ativos"
               value={dashboardStats.activeEvents.toString()}
-              icon={<CalendarIcon className="h-6 w-6" />}
+              icon={<Calendar size={24} />}
               change={{ value: dashboardStats.eventsChange, label: 'novos' }}
               loading={isLoading}
             />
             <StatCard
               title="Taxa de Check-in"
               value={`${dashboardStats.checkInRate.toFixed(1)}%`}
-              icon={<UserGroupIcon className="h-6 w-6" />}
+              icon={<Users size={24} />}
               change={{ value: dashboardStats.checkInChange, label: 'vs. período anterior' }}
               loading={isLoading}
             />
@@ -149,11 +149,11 @@ export default function AnalyticsPage() {
             <Card>
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900">Receita ao Longo do Tempo</h3>
-                <ChartBarIcon className="h-6 w-6 text-gray-400" />
+                <BarChart3 size={24} className="text-gray-400" />
               </div>
               <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
                 <div className="text-center">
-                  <ChartBarIcon className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                  <BarChart3 size={48} className="text-gray-300 mx-auto mb-2" />
                   <p className="text-gray-500">Gráfico de receita mensal</p>
                   <div className="mt-4 grid grid-cols-6 gap-4">
                     {analytics.revenueByMonth.slice(-6).map((month) => (
@@ -249,7 +249,7 @@ export default function AnalyticsPage() {
               <Card>
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-green-100 rounded-lg">
-                    <TrophyIcon className="h-6 w-6 text-green-600" />
+                    <Trophy size={24} className="text-green-600" />
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Crescimento de Vendas</p>
@@ -263,7 +263,7 @@ export default function AnalyticsPage() {
               <Card>
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-blue-100 rounded-lg">
-                    <CurrencyDollarIcon className="h-6 w-6 text-blue-600" />
+                    <DollarSign size={24} className="text-blue-600" />
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Crescimento de Receita</p>
@@ -277,7 +277,7 @@ export default function AnalyticsPage() {
               <Card>
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-purple-100 rounded-lg">
-                    <UserGroupIcon className="h-6 w-6 text-purple-600" />
+                    <Users size={24} className="text-purple-600" />
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Preço Médio do Bilhete</p>

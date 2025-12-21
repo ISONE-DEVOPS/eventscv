@@ -60,6 +60,12 @@ const superAdminNav: NavSection[] = [
     ],
   },
   {
+    title: 'Integrações',
+    items: [
+      { label: 'Pagali', href: '/super-admin/integrations/pagali', icon: <CreditCard size={20} /> },
+    ],
+  },
+  {
     title: 'Sistema',
     items: [
       { label: 'Analytics', href: '/super-admin/analytics', icon: <BarChart3 size={20} /> },

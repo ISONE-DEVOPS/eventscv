@@ -3,23 +3,23 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import DashboardLayout from '../../components/layout/DashboardLayout';
+import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { DataTable, Button, StatusBadge, ConfirmModal } from '../../components/ui';
 import type { Column } from '../../components/ui';
 import { getEvents, deleteEvent, type Event, type EventFilters } from '../../lib/services/events';
-import { useAuthStore } from '../../lib/store/auth';
+import { useAuthStore } from '@/stores/authStore';
 import {
-  PlusIcon,
-  PencilIcon,
-  TrashIcon,
-  EyeIcon,
-  CalendarIcon,
-  TicketIcon,
-} from '@heroicons/react/24/outline';
+  Plus,
+  Pencil,
+  Trash2,
+  Eye,
+  Calendar,
+  Ticket,
+} from 'lucide-react';
 
 export default function EventsPage() {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { claims } = useAuthStore();
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,22 +35,20 @@ export default function EventsPage() {
 
   useEffect(() => {
     loadEvents();
-  }, [statusFilter, user]);
+  }, [statusFilter, claims]);
 
   const loadEvents = async () => {
-    if (!user?.organizationId) return;
+    if (!claims?.organizationId) return;
 
     setIsLoading(true);
     try {
-      const filters: EventFilters = {
-        organizationId: user.organizationId,
-      };
+      const filters: EventFilters = {};
 
       if (statusFilter) {
         filters.status = statusFilter;
       }
 
-      const result = await getEvents(filters, { pageSize: 100 });
+      const result = await getEvents(claims.organizationId, filters, { pageSize: 100 });
       setEvents(result.events);
       setTotalItems(result.events.length);
     } catch (error) {
@@ -68,8 +66,8 @@ export default function EventsPage() {
     if (!searchQuery) return true;
     const search = searchQuery.toLowerCase();
     return (
-      event.name.toLowerCase().includes(search) ||
-      event.venue.name.toLowerCase().includes(search)
+      event.title.toLowerCase().includes(search) ||
+      event.venue.toLowerCase().includes(search)
     );
   });
 
@@ -104,17 +102,17 @@ export default function EventsPage() {
           {event.coverImage ? (
             <img
               src={event.coverImage}
-              alt={event.name}
+              alt={event.title}
               className="h-10 w-10 rounded-lg object-cover"
             />
           ) : (
             <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
-              <CalendarIcon className="h-5 w-5 text-purple-600" />
+              <Calendar className="h-5 w-5 text-purple-600" />
             </div>
           )}
           <div>
-            <p className="font-medium text-gray-900">{event.name}</p>
-            <p className="text-sm text-gray-500">{event.venue.name}</p>
+            <p className="font-medium text-gray-900">{event.title}</p>
+            <p className="text-sm text-gray-500">{event.venue}</p>
           </div>
         </div>
       ),
@@ -151,7 +149,7 @@ export default function EventsPage() {
       header: 'Bilhetes',
       render: (event) => (
         <div className="flex items-center gap-2">
-          <TicketIcon className="h-4 w-4 text-gray-400" />
+          <Ticket className="h-4 w-4 text-gray-400" />
           <span>
             {event.ticketsSold || 0} / {event.totalCapacity || 0}
           </span>
@@ -163,7 +161,7 @@ export default function EventsPage() {
       header: 'Receita',
       render: (event) => (
         <span className="font-medium">
-          {(event.totalRevenue || 0).toLocaleString('pt-PT')} CVE
+          {(event.revenue || 0).toLocaleString('pt-PT')} CVE
         </span>
       ),
     },
@@ -175,12 +173,12 @@ export default function EventsPage() {
         <div className="flex items-center gap-1">
           <Link href={`/events/${event.id}`}>
             <button className="p-2 hover:bg-gray-100 rounded-lg" title="Ver">
-              <EyeIcon className="h-4 w-4 text-gray-500" />
+              <Eye className="h-4 w-4 text-gray-500" />
             </button>
           </Link>
           <Link href={`/events/${event.id}/edit`}>
             <button className="p-2 hover:bg-gray-100 rounded-lg" title="Editar">
-              <PencilIcon className="h-4 w-4 text-gray-500" />
+              <Pencil className="h-4 w-4 text-gray-500" />
             </button>
           </Link>
           <button
@@ -191,7 +189,7 @@ export default function EventsPage() {
             className="p-2 hover:bg-red-50 rounded-lg"
             title="Eliminar"
           >
-            <TrashIcon className="h-4 w-4 text-red-500" />
+            <Trash2 className="h-4 w-4 text-red-500" />
           </button>
         </div>
       ),
@@ -208,7 +206,7 @@ export default function EventsPage() {
             <p className="text-gray-500">Gerencie os eventos da sua organização</p>
           </div>
           <Link href="/events/create">
-            <Button leftIcon={<PlusIcon className="h-5 w-5" />}>
+            <Button leftIcon={<Plus className="h-5 w-5" />}>
               Criar Evento
             </Button>
           </Link>
@@ -259,7 +257,7 @@ export default function EventsPage() {
         }}
         onConfirm={handleDelete}
         title="Eliminar Evento"
-        message={`Tem a certeza que deseja eliminar o evento "${eventToDelete?.name}"? Esta ação não pode ser desfeita.`}
+        message={`Tem a certeza que deseja eliminar o evento "${eventToDelete?.title}"? Esta ação não pode ser desfeita.`}
         confirmText="Eliminar"
         cancelText="Cancelar"
         variant="danger"

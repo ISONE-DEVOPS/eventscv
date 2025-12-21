@@ -28,7 +28,7 @@ const shadowClasses = {
   lg: 'shadow-lg',
 };
 
-export default function Card({
+export function Card({
   children,
   className = '',
   padding = 'md',

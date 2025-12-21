@@ -376,6 +376,7 @@ export interface EventSettings {
   refundDeadlineHours: number;
   checkInStartMinutes: number;
   maxTicketsPerUser: number;
+  ageRestriction: number;
 }
 
 export interface Event {
@@ -407,25 +408,74 @@ export interface Event {
   publishedAt?: Date;
   isFeatured: boolean;
   featuredUntil?: Date;
+  // Privacy
+  isPublic: boolean;
   // Features
   nfcEnabled: boolean;
   cashlessEnabled: boolean;
   // Capacity & Sales
   totalCapacity: number;
   ticketsSold: number;
+  checkIns: number;
   revenue: number;
+  views: number;
   // Settings
   settings: EventSettings;
   // Metadata
   createdAt: Date;
   updatedAt: Date;
+  // QR Code Registration
+  registration?: EventRegistration;
+  qrScans?: number;
+}
+
+// ============================================
+// EVENT REGISTRATION & QR CODE TYPES
+// ============================================
+
+export interface EventRegistration {
+  enabled: boolean;
+  guestRegistrationEnabled: boolean;
+  customFields: CustomField[];
+  qrCodeUrl?: string;
+  qrCodeData?: string; // URL encoded in QR
+  qrCodeGeneratedAt?: Date;
+}
+
+export interface CustomField {
+  id: string;
+  type: 'text' | 'email' | 'phone' | 'select' | 'multiselect' | 'checkbox' | 'textarea';
+  label: string;
+  placeholder?: string;
+  required: boolean;
+  options?: string[]; // For select/multiselect
+  order: number;
+}
+
+export interface GuestRegistration {
+  id: string;
+  eventId: string;
+  name: string;
+  email: string;
+  phone: string;
+  customFieldResponses?: Record<string, any>;
+  demographics?: {
+    ageRange?: string;
+    gender?: string;
+    island?: string;
+    city?: string;
+  };
+  source: 'web' | 'qr' | 'social';
+  registeredAt: Date;
+  convertedToOrder?: boolean;
+  orderId?: string;
 }
 
 // ============================================
 // TICKET TYPES
 // ============================================
 
-export type TicketStatus = 'active' | 'used' | 'cancelled' | 'transferred' | 'expired';
+export type TicketStatus = 'valid' | 'active' | 'used' | 'cancelled' | 'refunded' | 'transferred' | 'expired';
 
 export interface TicketType {
   id: string;
@@ -458,6 +508,13 @@ export interface Ticket {
   orderId: string;
   userId: string;
   organizationId: string;
+  // Denormalized event/ticket data
+  eventName: string;
+  ticketTypeName: string;
+  price: number;
+  // Buyer info
+  buyerName?: string;
+  buyerEmail?: string;
   // Codes
   qrCode: string;
   qrCodeUrl?: string;
@@ -501,7 +558,14 @@ export interface Order {
   id: string;
   eventId: string;
   organizationId: string;
-  userId: string;
+  userId?: string; // Optional for guest orders
+  // Guest information
+  guestInfo?: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  source?: 'direct' | 'qr' | 'social' | 'email';
   // Items
   items: OrderItem[];
   subtotal: number;

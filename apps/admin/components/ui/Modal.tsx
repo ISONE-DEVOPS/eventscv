@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useEffect } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { X } from 'lucide-react';
 
 // ============================================
 // TYPES

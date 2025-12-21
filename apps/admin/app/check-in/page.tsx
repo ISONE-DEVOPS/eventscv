@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import DashboardLayout from '../../components/layout/DashboardLayout';
+import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { Button, Card, StatCard, StatusBadge, Input, Select, AlertModal } from '../../components/ui';
 import { getEvents, type Event } from '../../lib/services/events';
 import {
@@ -10,16 +10,16 @@ import {
   cancelCheckIn,
   type Ticket,
 } from '../../lib/services/tickets';
-import { useAuthStore } from '../../lib/store/auth';
+import { useAuthStore } from '@/stores/authStore';
 import {
-  QrCodeIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  UserGroupIcon,
-  TicketIcon,
-  ArrowPathIcon,
-  MagnifyingGlassIcon,
-} from '@heroicons/react/24/outline';
+  QrCode,
+  CheckCircle,
+  XCircle,
+  Users,
+  Ticket as TicketIcon,
+  RefreshCw,
+  Search,
+} from 'lucide-react';
 
 interface CheckInResult {
   success: boolean;
@@ -34,7 +34,7 @@ interface RecentCheckIn {
 }
 
 export default function CheckInPage() {
-  const { user } = useAuthStore();
+  const { user, claims } = useAuthStore();
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEventId, setSelectedEventId] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -62,7 +62,7 @@ export default function CheckInPage() {
 
   useEffect(() => {
     loadEvents();
-  }, [user]);
+  }, [claims]);
 
   useEffect(() => {
     if (selectedEventId) {
@@ -79,12 +79,13 @@ export default function CheckInPage() {
   }, [selectedEventId]);
 
   const loadEvents = async () => {
-    if (!user?.organizationId) return;
+    if (!claims?.organizationId) return;
 
     setIsLoading(true);
     try {
       const result = await getEvents(
-        { organizationId: user.organizationId, status: 'published' },
+        claims.organizationId,
+        { status: 'published' },
         { pageSize: 50 }
       );
       setEvents(result.events);
@@ -108,7 +109,7 @@ export default function CheckInPage() {
 
     try {
       // Try to find ticket by QR code
-      const ticket = await getTicketByQRCode(searchQuery.trim());
+      const ticket = await getTicketByQRCode(selectedEventId, searchQuery.trim());
 
       if (!ticket) {
         showAlert('error', 'Bilhete Não Encontrado', 'O código inserido não corresponde a nenhum bilhete.');
@@ -150,7 +151,7 @@ export default function CheckInPage() {
       }
 
       // Do check-in
-      await checkInTicket(ticket.id, user?.uid || 'admin');
+      await checkInTicket(selectedEventId, ticket.id, user?.uid || 'admin');
 
       showAlert('success', 'Check-in Realizado!', `${ticket.buyerName || 'Participante'} - ${ticket.ticketTypeName}`);
       setLastResult({
@@ -200,7 +201,7 @@ export default function CheckInPage() {
 
   const eventOptions = events.map((event) => ({
     value: event.id,
-    label: `${event.name} - ${event.startDate.toLocaleDateString('pt-PT')}`,
+    label: `${event.title} - ${event.startDate.toLocaleDateString('pt-PT')}`,
   }));
 
   return (
@@ -215,7 +216,7 @@ export default function CheckInPage() {
           <Button
             variant="outline"
             onClick={loadEvents}
-            leftIcon={<ArrowPathIcon className="h-5 w-5" />}
+            leftIcon={<RefreshCw size={20} />}
           >
             Atualizar
           </Button>
@@ -239,24 +240,24 @@ export default function CheckInPage() {
               <StatCard
                 title="Check-ins Realizados"
                 value={checkInCount.toLocaleString('pt-PT')}
-                icon={<CheckCircleIcon className="h-6 w-6" />}
+                icon={<CheckCircle size={24} />}
               />
               <StatCard
                 title="Total de Bilhetes"
                 value={totalTickets.toLocaleString('pt-PT')}
-                icon={<TicketIcon className="h-6 w-6" />}
+                icon={<TicketIcon size={24} />}
               />
               <StatCard
                 title="Taxa de Check-in"
                 value={`${checkInRate}%`}
-                icon={<UserGroupIcon className="h-6 w-6" />}
+                icon={<Users size={24} />}
               />
             </div>
 
             {/* Scanner Input */}
             <Card className="bg-gradient-to-r from-purple-600 to-purple-800">
               <div className="text-center py-8">
-                <QrCodeIcon className="h-16 w-16 text-white mx-auto mb-4" />
+                <QrCode size={64} className="text-white mx-auto mb-4" />
                 <h2 className="text-xl font-bold text-white mb-2">
                   Leia o QR Code ou digite o código
                 </h2>
@@ -265,7 +266,7 @@ export default function CheckInPage() {
                 </p>
                 <div className="max-w-md mx-auto">
                   <div className="relative">
-                    <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Search size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
                     <input
                       ref={inputRef}
                       type="text"
@@ -300,9 +301,9 @@ export default function CheckInPage() {
               >
                 <div className="flex items-center gap-4">
                   {lastResult.success ? (
-                    <CheckCircleIcon className="h-12 w-12 text-green-500" />
+                    <CheckCircle size={48} className="text-green-500" />
                   ) : (
-                    <XCircleIcon className="h-12 w-12 text-red-500" />
+                    <XCircle size={48} className="text-red-500" />
                   )}
                   <div>
                     <p
@@ -337,11 +338,11 @@ export default function CheckInPage() {
                     >
                       <div className="flex items-center gap-3">
                         {checkIn.status === 'success' ? (
-                          <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                          <CheckCircle size={20} className="text-green-500" />
                         ) : checkIn.status === 'already_used' ? (
-                          <XCircleIcon className="h-5 w-5 text-yellow-500" />
+                          <XCircle size={20} className="text-yellow-500" />
                         ) : (
-                          <XCircleIcon className="h-5 w-5 text-red-500" />
+                          <XCircle size={20} className="text-red-500" />
                         )}
                         <div>
                           <p className="font-medium text-gray-900">
@@ -381,7 +382,7 @@ export default function CheckInPage() {
         {/* No Events */}
         {!isLoading && events.length === 0 && (
           <Card className="text-center py-12">
-            <QrCodeIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <QrCode size={64} className="text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
               Nenhum evento ativo
             </h3>

@@ -1,25 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import DashboardLayout from '../../components/layout/DashboardLayout';
+import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { Card, Button, Input, Textarea, Switch, FormSection, AlertModal } from '../../components/ui';
 import {
   getOrganizationSettings,
   updateOrganizationSettings,
   type OrganizationSettings,
 } from '../../lib/services/organizations';
-import { useAuthStore } from '../../lib/store/auth';
+import { useAuthStore } from '@/stores/authStore';
 import {
-  BuildingOfficeIcon,
-  BellIcon,
-  CreditCardIcon,
-  ShieldCheckIcon,
-  GlobeAltIcon,
-  PhotoIcon,
-} from '@heroicons/react/24/outline';
+  Building2,
+  Bell,
+  CreditCard,
+  Shield,
+  Globe,
+  Image,
+} from 'lucide-react';
 
 export default function SettingsPage() {
-  const { user } = useAuthStore();
+  const { claims } = useAuthStore();
   const [settings, setSettings] = useState<OrganizationSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -52,14 +52,14 @@ export default function SettingsPage() {
 
   useEffect(() => {
     loadSettings();
-  }, [user]);
+  }, [claims]);
 
   const loadSettings = async () => {
-    if (!user?.organizationId) return;
+    if (!claims?.organizationId) return;
 
     setIsLoading(true);
     try {
-      const data = await getOrganizationSettings(user.organizationId);
+      const data = await getOrganizationSettings(claims.organizationId);
       if (data) {
         setSettings(data);
         // Populate form fields
@@ -86,11 +86,11 @@ export default function SettingsPage() {
   };
 
   const handleSave = async () => {
-    if (!user?.organizationId) return;
+    if (!claims?.organizationId) return;
 
     setIsSaving(true);
     try {
-      await updateOrganizationSettings(user.organizationId, {
+      await updateOrganizationSettings(claims.organizationId, {
         name: orgName,
         description: orgDescription,
         email: orgEmail,
@@ -125,10 +125,10 @@ export default function SettingsPage() {
   };
 
   const tabs = [
-    { id: 'organization', label: 'Organização', icon: BuildingOfficeIcon },
-    { id: 'payment', label: 'Pagamento', icon: CreditCardIcon },
-    { id: 'notifications', label: 'Notificações', icon: BellIcon },
-    { id: 'security', label: 'Segurança', icon: ShieldCheckIcon },
+    { id: 'organization', label: 'Organização', icon: Building2 },
+    { id: 'payment', label: 'Pagamento', icon: CreditCard },
+    { id: 'notifications', label: 'Notificações', icon: Bell },
+    { id: 'security', label: 'Segurança', icon: Shield },
   ];
 
   if (isLoading) {
@@ -219,7 +219,7 @@ export default function SettingsPage() {
                   value={orgWebsite}
                   onChange={(e) => setOrgWebsite(e.target.value)}
                   placeholder="https://..."
-                  leftIcon={<GlobeAltIcon className="h-5 w-5" />}
+                  leftIcon={<Globe size={20} />}
                 />
               </div>
 
@@ -228,7 +228,7 @@ export default function SettingsPage() {
                 value={orgLogo}
                 onChange={(e) => setOrgLogo(e.target.value)}
                 placeholder="https://..."
-                leftIcon={<PhotoIcon className="h-5 w-5" />}
+                leftIcon={<Image size={20} />}
               />
               {orgLogo && (
                 <div className="mt-2">

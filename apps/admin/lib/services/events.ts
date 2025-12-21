@@ -21,6 +21,9 @@ import {
 import { db } from '../firebase';
 import type { Event, TicketType } from '@eventscv/shared-types';
 
+// Re-export types for convenience
+export type { Event, TicketType };
+
 const EVENTS_COLLECTION = 'events';
 
 export interface EventFilters {
@@ -67,6 +70,39 @@ export async function getEvents(
   let q = query(
     collection(db, EVENTS_COLLECTION),
     where('organizationId', '==', organizationId),
+    orderBy('startDate', 'desc')
+  );
+
+  if (filters?.status) {
+    q = query(q, where('status', '==', filters.status));
+  }
+
+  if (pagination?.pageSize) {
+    q = query(q, limit(pagination.pageSize));
+  }
+
+  if (pagination?.lastDoc) {
+    q = query(q, startAfter(pagination.lastDoc));
+  }
+
+  const snapshot = await getDocs(q);
+  const events = snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as Event[];
+
+  const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+
+  return { events, lastDoc };
+}
+
+// Get all events (Super Admin)
+export async function getAllEvents(
+  filters?: EventFilters,
+  pagination?: PaginationOptions
+): Promise<{ events: Event[]; lastDoc: DocumentSnapshot | null }> {
+  let q = query(
+    collection(db, EVENTS_COLLECTION),
     orderBy('startDate', 'desc')
   );
 
@@ -268,7 +304,8 @@ export async function getEventStats(eventId: string): Promise<EventStats> {
   let totalTicketsSold = 0;
   let totalRevenue = 0;
 
-  for (const ticketType of ticketTypes) {
+  for (const t of ticketTypes) {
+    const ticketType = t as TicketType & { sold?: number };
     ticketsByType[ticketType.name] = ticketType.sold || 0;
     totalTicketsSold += ticketType.sold || 0;
     totalRevenue += (ticketType.sold || 0) * ticketType.price;

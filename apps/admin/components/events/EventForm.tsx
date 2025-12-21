@@ -15,11 +15,11 @@ import {
 import { Card } from '../ui/Card';
 import { type EventFormData } from '../../lib/services/events';
 import {
-  ArrowLeftIcon,
-  PlusIcon,
-  TrashIcon,
-  PhotoIcon,
-} from '@heroicons/react/24/outline';
+  ArrowLeft,
+  Plus,
+  Trash2,
+  Image,
+} from 'lucide-react';
 
 interface TicketTypeForm {
   id: string;
@@ -94,6 +94,11 @@ export default function EventForm({
       salesEnd: '',
     },
   ]);
+
+  // Custom Registration Fields
+  const [customFields, setCustomFields] = useState<any[]>(
+    initialData?.registration?.customFields || []
+  );
 
   // Errors
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -220,6 +225,11 @@ export default function EventForm({
         requireId,
         ageRestriction,
         maxTicketsPerOrder: 10,
+      },
+      registration: {
+        enabled: true,
+        guestRegistrationEnabled: true,
+        customFields: customFields,
       },
       ticketTypes: ticketTypes.map((t) => ({
         name: t.name,
@@ -513,6 +523,113 @@ export default function EventForm({
             >
               Adicionar Tipo de Bilhete
             </Button>
+          </div>
+        </FormSection>
+      </Card>
+
+      {/* Custom Registration Fields */}
+      <Card>
+        <FormSection
+          title="Campos de Registo Personalizados"
+          description="Configure campos adicionais para recolher informações dos participantes"
+        >
+          <div className="space-y-4">
+            {customFields.map((field, index) => (
+              <div
+                key={field.id}
+                className="flex gap-3 items-start p-4 border border-gray-200 rounded-lg bg-gray-50"
+              >
+                <div className="flex-1 grid grid-cols-2 gap-3">
+                  <Input
+                    label="Nome do Campo"
+                    value={field.label}
+                    onChange={(e) => {
+                      const updated = [...customFields];
+                      updated[index].label = e.target.value;
+                      setCustomFields(updated);
+                    }}
+                    placeholder="Ex: Empresa, Cargo, Restrições Alimentares"
+                  />
+
+                  <Select
+                    label="Tipo de Campo"
+                    value={field.type}
+                    onChange={(e) => {
+                      const updated = [...customFields];
+                      updated[index].type = e.target.value;
+                      setCustomFields(updated);
+                    }}
+                  >
+                    <option value="text">Texto</option>
+                    <option value="email">Email</option>
+                    <option value="phone">Telefone</option>
+                    <option value="textarea">Texto Longo</option>
+                    <option value="select">Seleção</option>
+                    <option value="checkbox">Checkbox</option>
+                  </Select>
+
+                  <Input
+                    label="Placeholder (Opcional)"
+                    value={field.placeholder || ''}
+                    onChange={(e) => {
+                      const updated = [...customFields];
+                      updated[index].placeholder = e.target.value;
+                      setCustomFields(updated);
+                    }}
+                    placeholder="Texto de ajuda"
+                  />
+
+                  <div className="flex items-center gap-4 pt-6">
+                    <Switch
+                      checked={field.required}
+                      onChange={(checked) => {
+                        const updated = [...customFields];
+                        updated[index].required = checked;
+                        setCustomFields(updated);
+                      }}
+                      label="Obrigatório"
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setCustomFields(customFields.filter((_, i) => i !== index));
+                  }}
+                  className="mt-6"
+                >
+                  <Trash2 size={16} className="text-red-500" />
+                </Button>
+              </div>
+            ))}
+
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setCustomFields([
+                  ...customFields,
+                  {
+                    id: `field_${Date.now()}`,
+                    type: 'text',
+                    label: '',
+                    placeholder: '',
+                    required: false,
+                    order: customFields.length,
+                  },
+                ]);
+              }}
+              className="w-full"
+            >
+              <Plus size={16} />
+              Adicionar Campo Personalizado
+            </Button>
+
+            {customFields.length === 0 && (
+              <p className="text-sm text-gray-500 text-center py-4">
+                Nenhum campo personalizado adicionado. Clique no botão acima para adicionar.
+              </p>
+            )}
           </div>
         </FormSection>
       </Card>

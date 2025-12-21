@@ -10,43 +10,52 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Background Layers (Dark Mode First)
-        background: {
-          DEFAULT: '#0F0B1A',
-          secondary: '#1A1425',
-          tertiary: '#251E30',
-          elevated: '#302840',
+        foreground: {
+          DEFAULT: 'hsl(var(--foreground))',
+          secondary: 'hsl(var(--foreground-secondary))',
+          muted: 'hsl(var(--foreground-muted))',
         },
-        // Brand Colors - EventsCV Palette
+        // Background Layers
+        background: {
+          DEFAULT: 'hsl(var(--background))',
+          secondary: 'hsl(var(--background-secondary))',
+          tertiary: 'hsl(var(--background-tertiary))',
+          elevated: 'hsl(var(--background-elevated))',
+        },
+        // Brand Colors - EventsCV Mobile Palette
         brand: {
-          DEFAULT: '#4A3C8C',
-          primary: '#4A3C8C',
-          secondary: '#7E5C8A',
-          accent: '#F9A845',
-          light: '#FCCA7C',
-          muted: '#A67C7C',
+          DEFAULT: 'hsl(var(--brand-primary))',
+          primary: 'hsl(var(--brand-primary))',
+          secondary: 'hsl(var(--brand-secondary))',
+          accent: 'hsl(var(--brand-accent))',
+          light: 'hsl(var(--brand-light))',
+          muted: 'hsl(var(--brand-muted))',
+          dark: 'hsl(var(--brand-dark))',
         },
         // Semantic Colors
         success: {
-          DEFAULT: '#10B981',
-          light: '#34D399',
-          dark: '#059669',
+          DEFAULT: 'hsl(var(--success))',
+          light: 'hsl(var(--success-light))',
+          dark: 'hsl(var(--success-dark))',
         },
         warning: {
-          DEFAULT: '#F59E0B',
-          light: '#FBBF24',
-          dark: '#D97706',
+          DEFAULT: 'hsl(var(--warning))',
+          light: 'hsl(var(--warning-light))',
+          dark: 'hsl(var(--warning-dark))',
         },
         error: {
-          DEFAULT: '#EF4444',
-          light: '#F87171',
-          dark: '#DC2626',
+          DEFAULT: 'hsl(var(--error))',
+          light: 'hsl(var(--error-light))',
+          dark: 'hsl(var(--error-dark))',
+        },
+        border: {
+          DEFAULT: 'hsl(var(--border-color))',
         },
         // Glass Effect
         glass: {
-          DEFAULT: 'rgba(255, 255, 255, 0.05)',
-          light: 'rgba(255, 255, 255, 0.08)',
-          border: 'rgba(255, 255, 255, 0.1)',
+          DEFAULT: 'hsl(var(--glass))',
+          light: 'hsl(var(--glass-strong))',
+          border: 'hsl(var(--glass-border))',
         },
       },
       fontFamily: {
@@ -68,31 +77,31 @@ const config: Config = {
         '5xl': '2.5rem',
       },
       boxShadow: {
-        'glow-sm': '0 0 20px rgba(74, 60, 140, 0.3)',
-        'glow-md': '0 0 40px rgba(74, 60, 140, 0.4)',
-        'glow-lg': '0 0 60px rgba(74, 60, 140, 0.5)',
+        'glow-sm': '0 0 20px rgba(121, 112, 246, 0.3)',
+        'glow-md': '0 0 40px rgba(121, 112, 246, 0.4)',
+        'glow-lg': '0 0 60px rgba(121, 112, 246, 0.5)',
         'glow-accent': '0 0 40px rgba(249, 168, 69, 0.4)',
         'glass': '0 8px 32px rgba(0, 0, 0, 0.3)',
         'card': '0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
         'card-hover': '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2)',
       },
       backgroundImage: {
-        // Gradients
-        'gradient-primary': 'linear-gradient(135deg, #4A3C8C 0%, #7E5C8A 50%, #A67C7C 100%)',
-        'gradient-ocean': 'linear-gradient(135deg, #4A3C8C 0%, #7E5C8A 100%)',
-        'gradient-sunset': 'linear-gradient(135deg, #F9A845 0%, #FCCA7C 50%, #A67C7C 100%)',
-        'gradient-night': 'linear-gradient(135deg, #0F0B1A 0%, #1A1425 50%, #251E30 100%)',
-        'gradient-dark': 'linear-gradient(135deg, #0F0B1A 0%, #1A1425 100%)',
-        // Mesh Gradients
+        // Gradients - Updated with mobile primary color #7970F6
+        'gradient-primary': 'linear-gradient(135deg, #7970F6 0%, #9089F7 50%, #B0AAF9 100%)',
+        'gradient-ocean': 'linear-gradient(135deg, #5B52D4 0%, #7970F6 100%)',
+        'gradient-sunset': 'linear-gradient(135deg, #F9A845 0%, #FCCA7C 50%, #B0AAF9 100%)',
+        'gradient-night': 'linear-gradient(135deg, #111827 0%, #1F2937 50%, #374151 100%)',
+        'gradient-dark': 'linear-gradient(135deg, #111827 0%, #1F2937 100%)',
+        // Mesh Gradients - Updated with mobile primary color
         'mesh-gradient': `
-          radial-gradient(at 40% 20%, rgba(74, 60, 140, 0.3) 0px, transparent 50%),
-          radial-gradient(at 80% 0%, rgba(126, 92, 138, 0.3) 0px, transparent 50%),
+          radial-gradient(at 40% 20%, rgba(121, 112, 246, 0.3) 0px, transparent 50%),
+          radial-gradient(at 80% 0%, rgba(144, 137, 247, 0.3) 0px, transparent 50%),
           radial-gradient(at 0% 50%, rgba(249, 168, 69, 0.2) 0px, transparent 50%),
-          radial-gradient(at 80% 80%, rgba(166, 124, 124, 0.2) 0px, transparent 50%)
+          radial-gradient(at 80% 80%, rgba(176, 170, 249, 0.2) 0px, transparent 50%)
         `,
         'mesh-gradient-subtle': `
-          radial-gradient(at 40% 20%, rgba(74, 60, 140, 0.15) 0px, transparent 50%),
-          radial-gradient(at 80% 0%, rgba(126, 92, 138, 0.15) 0px, transparent 50%),
+          radial-gradient(at 40% 20%, rgba(121, 112, 246, 0.15) 0px, transparent 50%),
+          radial-gradient(at 80% 0%, rgba(144, 137, 247, 0.15) 0px, transparent 50%),
           radial-gradient(at 0% 50%, rgba(249, 168, 69, 0.1) 0px, transparent 50%)
         `,
         // Radial
@@ -145,8 +154,8 @@ const config: Config = {
           '50%': { boxShadow: '0 0 40px rgba(249, 168, 69, 0.6)' },
         },
         'glow': {
-          '0%': { boxShadow: '0 0 20px rgba(74, 60, 140, 0.4)' },
-          '100%': { boxShadow: '0 0 30px rgba(126, 92, 138, 0.6)' },
+          '0%': { boxShadow: '0 0 20px rgba(121, 112, 246, 0.4)' },
+          '100%': { boxShadow: '0 0 30px rgba(144, 137, 247, 0.6)' },
         },
         'fade-in': {
           '0%': { opacity: '0' },

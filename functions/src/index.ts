@@ -61,6 +61,17 @@ export {
 // export { eventReminder } from './notifications/eventReminder';
 
 // ============================================
+// QR CODE & REGISTRATION FUNCTIONS
+// ============================================
+export { generateEventQRCode } from './qrcode/generateEventQRCode';
+export { createGuestRegistration } from './registration/createGuestRegistration';
+
+// ============================================
+// ANALYTICS FUNCTIONS
+// ============================================
+export * as analytics from './analytics';
+
+// ============================================
 // SCHEDULED FUNCTIONS
 // ============================================
 // export { dailyReports } from './scheduled/dailyReports';

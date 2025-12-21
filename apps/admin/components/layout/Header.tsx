@@ -15,6 +15,7 @@ import {
 import { auth } from '@/lib/firebase';
 import { useAuthStore, getUserRole } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '../ui/ThemeToggle';
 
 interface HeaderProps {
   title?: string;
@@ -58,6 +59,9 @@ export function Header({ title }: HeaderProps) {
                        focus:border-brand-primary focus:outline-none transition-colors"
           />
         </div>
+
+        {/* Theme Toggle */}
+        <ThemeToggle />
 
         {/* Notifications */}
         <div className="relative">

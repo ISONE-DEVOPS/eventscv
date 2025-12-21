@@ -17,7 +17,7 @@ export type {
 } from './Badge';
 
 // Card
-export { default as Card, CardHeader, StatCard, ListCard } from './Card';
+export { Card, CardHeader, StatCard, ListCard } from './Card';
 export type {
   CardProps,
   CardHeaderProps,

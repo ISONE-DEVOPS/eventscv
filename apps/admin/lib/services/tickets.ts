@@ -19,6 +19,9 @@ import {
 import { db } from '../firebase';
 import type { Ticket, Order } from '@eventscv/shared-types';
 
+// Re-export types for convenience
+export type { Ticket, Order };
+
 // ============================================
 // TICKETS
 // ============================================

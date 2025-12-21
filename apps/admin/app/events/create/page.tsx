@@ -2,19 +2,19 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import DashboardLayout from '../../../components/layout/DashboardLayout';
+import { DashboardLayout } from '../../../components/layout/DashboardLayout';
 import EventForm from '../../../components/events/EventForm';
 import { createEvent, type EventFormData } from '../../../lib/services/events';
-import { useAuthStore } from '../../../lib/store/auth';
+import { useAuthStore } from '@/stores/authStore';
 
 export default function CreateEventPage() {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { claims } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (data: EventFormData) => {
-    if (!user?.organizationId) {
+    if (!claims?.organizationId) {
       setError('Organização não encontrada');
       return;
     }
@@ -23,7 +23,7 @@ export default function CreateEventPage() {
     setError(null);
 
     try {
-      const eventId = await createEvent(user.organizationId, data);
+      const eventId = await createEvent(claims.organizationId, data);
       router.push(`/events/${eventId}`);
     } catch (err) {
       console.error('Error creating event:', err);

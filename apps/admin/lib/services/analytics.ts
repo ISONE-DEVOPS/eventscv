@@ -124,49 +124,76 @@ export interface RealtimeStats {
 export async function getPlatformAnalytics(
   dateRange?: DateRange
 ): Promise<PlatformAnalytics> {
-  const now = new Date();
-  const startDate = dateRange?.startDate || new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const endDate = dateRange?.endDate || now;
+  // Try to get aggregated stats first
+  const statsDoc = await getDoc(doc(db, 'analytics', 'stats'));
+  const stats = statsDoc.exists() ? statsDoc.data() : null;
+
+  // Use aggregated data if available, otherwise fallback to on-the-fly calculation (or combined approach)
+  // For granular distributions (charts), we currently still need to query or store more detailed aggregations.
 
   // Get users
   const usersSnapshot = await getDocs(collection(db, 'users'));
   const usersByRole: Record<string, number> = {};
-  let totalUsers = 0;
 
   usersSnapshot.docs.forEach((doc) => {
     const data = doc.data();
-    totalUsers++;
     usersByRole[data.role] = (usersByRole[data.role] || 0) + 1;
   });
 
   // Get organizations
   const orgsSnapshot = await getDocs(collection(db, 'organizations'));
   const organizationsByStatus: Record<string, number> = {};
-  let totalOrganizations = 0;
 
   orgsSnapshot.docs.forEach((doc) => {
     const data = doc.data();
-    totalOrganizations++;
     organizationsByStatus[data.status] = (organizationsByStatus[data.status] || 0) + 1;
   });
 
   // Get events
   const eventsSnapshot = await getDocs(collection(db, 'events'));
   const eventsByStatus: Record<string, number> = {};
-  let totalEvents = 0;
-  let totalTicketsSold = 0;
-  let totalRevenue = 0;
 
   eventsSnapshot.docs.forEach((doc) => {
     const data = doc.data();
-    totalEvents++;
     eventsByStatus[data.status] = (eventsByStatus[data.status] || 0) + 1;
-    totalTicketsSold += data.ticketsSold || 0;
-    totalRevenue += data.totalRevenue || 0;
   });
 
+  // OVERVIEW DATA
+  // Prefer Cloud Function aggregated stats for totals
+  const totalUsers = stats?.totalUsers || usersSnapshot.size;
+  const totalOrganizations = orgsSnapshot.size; // We didn't aggregate orgs total yet in CF, so use snapshot
+  const totalEvents = stats?.totalEvents || eventsSnapshot.size;
+  const totalRevenue = stats?.totalRevenue || 0;
+  // Note: For totalRevenue, the manual calculation in previous code was iterating events. 
+  // If stats doc exists, we trust it. If not, we might ideally iterate, but to save reads/computation we rely on stats or simple fallback.
+  // Since we removed the manual iteration for revenue in this replacement to save lines, we rely on 'stats' or 0 fallback for now (assuming CF handles it).
+
+  // But wait, the previous code iterated events for 'totalTicketsSold' and 'totalRevenue'. 
+  // Let's keep the iteration for those if stats is missing, or for checks. 
+  // Actually, to ensure accuracy before CF deployment, let's keep manual calc as backup or primary for now?
+  // No, the goal is optimization.
+
+  let calculatedRevenue = 0;
+  let calculatedTickets = 0;
+  if (!stats) {
+    eventsSnapshot.docs.forEach(doc => {
+      calculatedRevenue += doc.data().totalRevenue || 0;
+      calculatedTickets += doc.data().ticketsSold || 0;
+    });
+  }
+
+  const finalRevenue = stats?.totalRevenue ?? calculatedRevenue;
+  const finalTickets = stats?.totalTicketsSold ?? calculatedTickets; // CF doesn't track ticketsSold yet? Check triggers.ts.
+  // Triggers.ts tracks: totalRevenue, totalTransactions, totalUsers, activeUsers, totalEvents, activeEvents. 
+  // It does NOT track totalTicketsSold yet.
+
+  // So we must calculate tickets manually or update CF. 
+  // For now, calculate tickets manually from eventsSnapshot.
+  let manualTicketsSold = 0;
+  eventsSnapshot.docs.forEach(d => manualTicketsSold += (d.data().ticketsSold || 0));
+
   // Calculate platform fees (assuming 5% platform fee)
-  const platformFees = totalRevenue * 0.05;
+  const platformFees = finalRevenue * 0.05;
 
   // Calculate growth (simplified - would need historical data for accurate calculation)
   const usersGrowth = 12.5; // Mock
@@ -178,8 +205,8 @@ export async function getPlatformAnalytics(
       totalUsers,
       totalOrganizations,
       totalEvents,
-      totalTicketsSold,
-      totalRevenue,
+      totalTicketsSold: manualTicketsSold,
+      totalRevenue: finalRevenue,
       platformFees,
     },
     trends: {

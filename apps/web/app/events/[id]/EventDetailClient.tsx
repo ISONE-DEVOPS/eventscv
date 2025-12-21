@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft,
   Calendar,
@@ -20,9 +21,11 @@ import {
   Info,
   ChevronRight,
 } from 'lucide-react';
+import { getEvent } from '../../../lib/services/events';
+import { GuestRegistrationModal } from '../../../components/events/GuestRegistrationModal';
 
-// Mock event data
-const eventData = {
+// Mock event data (fallback)
+const mockEventData = {
   id: '1',
   title: 'Festival Baía das Gatas 2024',
   description: `O Festival Baía das Gatas é um dos maiores eventos musicais de Cabo Verde, celebrando a rica cultura musical do arquipélago.
@@ -111,13 +114,56 @@ function formatShortDate(dateStr: string) {
 
 export default function EventDetailClient() {
   const params = useParams();
+  const eventId = params.id as string;
+
+  // Fetch event data from Firebase
+  const { data: firebaseEvent, isLoading, error } = useQuery({
+    queryKey: ['event', eventId],
+    queryFn: () => getEvent(eventId),
+    enabled: !!eventId,
+  });
+
+  // Use Firebase data if available, otherwise use mock data
+  const event = firebaseEvent || mockEventData;
+
   const [selectedTickets, setSelectedTickets] = useState<Record<string, number>>({});
   const [isFavorite, setIsFavorite] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Carregando evento...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error || (!firebaseEvent && eventId !== '1')) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-xl text-gray-900 mb-2">Evento não encontrado</p>
+          <p className="text-gray-600">O evento que procura não existe ou foi removido.</p>
+          <Link
+            href="/events"
+            className="mt-4 inline-block px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Ver todos os eventos
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const updateTicketQuantity = (ticketId: string, delta: number) => {
     setSelectedTickets((prev) => {
@@ -432,15 +478,23 @@ export default function EventDetailClient() {
       {/* Mobile Fixed Footer */}
       <div className="fixed bottom-0 left-0 right-0 glass-subtle border-t border-white/10 p-4 lg:hidden">
         <div className="container-app">
+          {/* Registration Button */}
+          <button
+            onClick={() => setShowRegistrationModal(true)}
+            className="w-full px-6 py-3 bg-white text-blue-600 border-2 border-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition-colors mb-4"
+          >
+            Registar Interesse
+          </button>
+
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-sm text-zinc-400">A partir de</p>
               <p className="text-xl font-bold text-white">
-                {eventData.tickets[0].price.toLocaleString('pt-CV')}$00
+                {event.tickets?.[0]?.price?.toLocaleString('pt-CV') || '0'}$00
               </p>
             </div>
             <Link
-              href={`/checkout?event=${eventData.id}`}
+              href={`/checkout?event=${event.id}`}
               className="btn btn-primary flex-1 max-w-[200px]"
             >
               <Ticket className="h-5 w-5" />
@@ -449,6 +503,15 @@ export default function EventDetailClient() {
           </div>
         </div>
       </div>
+
+      {/* Guest Registration Modal */}
+      <GuestRegistrationModal
+        isOpen={showRegistrationModal}
+        onClose={() => setShowRegistrationModal(false)}
+        eventId={event.id}
+        eventTitle={event.title}
+        customFields={event.registration?.customFields || []}
+      />
     </main>
   );
 }

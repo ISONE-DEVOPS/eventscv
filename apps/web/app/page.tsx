@@ -20,6 +20,7 @@ import {
   TrendingUp,
   Star,
 } from 'lucide-react';
+import { ThemeToggle } from './theme-toggle';
 
 // Mock data for featured events
 const featuredEvents = [
@@ -113,10 +114,12 @@ export default function HomePage() {
                 <Link href="/organizers" className="nav-link">
                   Organizadores
                 </Link>
+
               </nav>
 
               {/* Actions */}
               <div className="flex items-center gap-3">
+                <ThemeToggle />
                 <Link href="/auth/login" className="btn btn-ghost btn-sm">
                   Entrar
                 </Link>

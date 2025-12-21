@@ -412,6 +412,29 @@ service cloud.firestore {
     }
 
     // ============================================
+    // GUEST REGISTRATIONS COLLECTION
+    // ============================================
+
+    match /guestRegistrations/{registrationId} {
+      // Anyone can create guest registrations (public access for QR code registrations)
+      allow create: if true;
+
+      // Users can read registrations if:
+      // - Email matches their auth email (guest checking their own registration)
+      // - User is authenticated and belongs to the event's organization
+      // - User is super admin
+      allow read: if isAuthenticated() && (
+        resource.data.email == request.auth.token.email ||
+        get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizationId == getUserClaims().organizationId ||
+        isSuperAdmin()
+      );
+
+      // No updates or deletes (append-only for audit trail)
+      // Updates managed by Cloud Functions only
+      allow update, delete: if false;
+    }
+
+    // ============================================
     // SYSTEM CONFIG COLLECTION (Super Admin only)
     // ============================================
 

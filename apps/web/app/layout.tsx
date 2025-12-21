@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
+import { THEME_STORAGE_KEY } from './theme-constants';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -79,9 +81,30 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const themeScript = `
+    (() => {
+      try {
+        const stored = localStorage.getItem('${THEME_STORAGE_KEY}');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const theme = stored === 'dark' || stored === 'light' ? stored : (prefersDark ? 'dark' : 'light');
+        const root = document.documentElement;
+        root.classList.toggle('dark', theme === 'dark');
+        root.dataset.theme = theme === 'dark' ? 'dark' : 'light';
+        root.style.colorScheme = theme === 'dark' ? 'dark' : 'light';
+      } catch (error) {}
+    })();
+  `;
+
   return (
-    <html lang="pt" className={`${inter.variable} ${plusJakarta.variable}`}>
-      <body className="min-h-screen bg-background font-body text-white antialiased">
+    <html
+      lang="pt"
+      className={`${inter.variable} ${plusJakarta.variable}`}
+      suppressHydrationWarning
+    >
+      <body className="min-h-screen bg-background font-body text-foreground antialiased">
+        <Script id="theme-script" strategy="beforeInteractive">
+          {themeScript}
+        </Script>
         <Providers>{children}</Providers>
       </body>
     </html>

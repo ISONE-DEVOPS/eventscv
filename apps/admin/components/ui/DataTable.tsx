@@ -2,12 +2,12 @@
 
 import { useState } from 'react';
 import {
-  ChevronUpIcon,
-  ChevronDownIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  MagnifyingGlassIcon,
-} from '@heroicons/react/24/outline';
+  ChevronUp,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+} from 'lucide-react';
 
 // ============================================
 // TYPES
@@ -39,6 +39,15 @@ export interface DataTableProps<T> {
     onPageChange: (page: number) => void;
     onPageSizeChange?: (size: number) => void;
   };
+  serverSidePagination?: {
+    currentPage: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+    onNextPage: () => void;
+    onPrevPage: () => void;
+    pageSize?: number;
+    onPageSizeChange?: (size: number) => void;
+  };
   // Sorting
   sortColumn?: string;
   sortDirection?: 'asc' | 'desc';
@@ -56,7 +65,7 @@ export interface DataTableProps<T> {
 // COMPONENT
 // ============================================
 
-export default function DataTable<T extends Record<string, unknown>>({
+export default function DataTable<T>({
   columns,
   data,
   keyExtractor,
@@ -66,6 +75,7 @@ export default function DataTable<T extends Record<string, unknown>>({
   onSearch,
   searchValue,
   pagination,
+  serverSidePagination,
   sortColumn,
   sortDirection,
   onSort,
@@ -132,7 +142,7 @@ export default function DataTable<T extends Record<string, unknown>>({
           {/* Search */}
           {onSearch && (
             <div className="relative flex-1 max-w-md">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
                 value={localSearch}
@@ -179,9 +189,8 @@ export default function DataTable<T extends Record<string, unknown>>({
               {columns.map((column) => (
                 <th
                   key={column.key as string}
-                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
-                    column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''
-                  }`}
+                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''
+                    }`}
                   style={{ width: column.width }}
                   onClick={() => handleSort(column)}
                 >
@@ -189,9 +198,9 @@ export default function DataTable<T extends Record<string, unknown>>({
                     {column.header}
                     {column.sortable && sortColumn === column.key && (
                       sortDirection === 'asc' ? (
-                        <ChevronUpIcon className="h-4 w-4" />
+                        <ChevronUp className="h-4 w-4" />
                       ) : (
-                        <ChevronDownIcon className="h-4 w-4" />
+                        <ChevronDown className="h-4 w-4" />
                       )
                     )}
                   </div>
@@ -264,81 +273,105 @@ export default function DataTable<T extends Record<string, unknown>>({
       </div>
 
       {/* Pagination */}
-      {pagination && (
+      {(pagination || serverSidePagination) && (
         <div className="px-6 py-4 border-t border-gray-200">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            {/* Page size selector */}
-            {pagination.onPageSizeChange && (
+            {/* Page size selector - Only for standard pagination or if explicitly allowed */}
+            {(pagination?.onPageSizeChange || serverSidePagination?.onPageSizeChange) && (
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <span>Mostrar</span>
                 <select
-                  value={pagination.pageSize}
-                  onChange={(e) => pagination.onPageSizeChange?.(Number(e.target.value))}
+                  value={pagination?.pageSize ?? serverSidePagination?.pageSize}
+                  onChange={(e) => (pagination?.onPageSizeChange ?? serverSidePagination?.onPageSizeChange)?.(Number(e.target.value))}
                   className="border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 >
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
+                  {[10, 25, 50, 100].map(size => <option key={size} value={size}>{size}</option>)}
                 </select>
                 <span>por página</span>
               </div>
             )}
 
-            {/* Page info and navigation */}
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">
-                {((pagination.currentPage - 1) * pagination.pageSize) + 1} -{' '}
-                {Math.min(pagination.currentPage * pagination.pageSize, pagination.totalItems)} de{' '}
-                {pagination.totalItems}
-              </span>
-
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => pagination.onPageChange(pagination.currentPage - 1)}
-                  disabled={pagination.currentPage === 1}
-                  className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeftIcon className="h-5 w-5" />
-                </button>
-
-                {/* Page numbers */}
-                {[...Array(Math.min(5, pagination.totalPages))].map((_, i) => {
-                  let pageNum: number;
-                  if (pagination.totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (pagination.currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (pagination.currentPage >= pagination.totalPages - 2) {
-                    pageNum = pagination.totalPages - 4 + i;
-                  } else {
-                    pageNum = pagination.currentPage - 2 + i;
-                  }
-
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => pagination.onPageChange(pageNum)}
-                      className={`px-3 py-1 rounded text-sm ${
-                        pagination.currentPage === pageNum
-                          ? 'bg-purple-600 text-white'
-                          : 'hover:bg-gray-100'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-
-                <button
-                  onClick={() => pagination.onPageChange(pagination.currentPage + 1)}
-                  disabled={pagination.currentPage === pagination.totalPages}
-                  className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronRightIcon className="h-5 w-5" />
-                </button>
+            {/* Pagination Controls */}
+            {serverSidePagination ? (
+              // Server Side (Cursor) Controls
+              <div className="flex items-center gap-4 ml-auto">
+                <span className="text-sm text-gray-600">
+                  Página {serverSidePagination.currentPage}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={serverSidePagination.onPrevPage}
+                    disabled={!serverSidePagination.hasPrevPage}
+                    className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={serverSidePagination.onNextPage}
+                    disabled={!serverSidePagination.hasNextPage}
+                    className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : pagination ? (
+              // Standard Client Side Controls
+              <>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-gray-600">
+                    {((pagination.currentPage - 1) * pagination.pageSize) + 1} -{' '}
+                    {Math.min(pagination.currentPage * pagination.pageSize, pagination.totalItems)} de{' '}
+                    {pagination.totalItems}
+                  </span>
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => pagination.onPageChange(pagination.currentPage - 1)}
+                      disabled={pagination.currentPage === 1}
+                      className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+
+                    {/* Page numbers logic simplified for brevity, kept mostly same */}
+                    {[...Array(Math.min(5, pagination.totalPages))].map((_, i) => {
+                      let pageNum: number;
+                      if (pagination.totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (pagination.currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (pagination.currentPage >= pagination.totalPages - 2) {
+                        pageNum = pagination.totalPages - 4 + i;
+                      } else {
+                        pageNum = pagination.currentPage - 2 + i;
+                      }
+
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => pagination.onPageChange(pageNum)}
+                          className={`px-3 py-1 rounded text-sm ${pagination.currentPage === pageNum
+                            ? 'bg-purple-600 text-white'
+                            : 'hover:bg-gray-100'
+                            }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+
+                    <button
+                      onClick={() => pagination.onPageChange(pagination.currentPage + 1)}
+                      disabled={pagination.currentPage === pagination.totalPages}
+                      className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : null}
           </div>
         </div>
       )}

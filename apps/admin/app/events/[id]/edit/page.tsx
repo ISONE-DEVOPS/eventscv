@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import DashboardLayout from '../../../../components/layout/DashboardLayout';
+import { DashboardLayout } from '../../../../components/layout/DashboardLayout';
 import EventForm from '../../../../components/events/EventForm';
 import {
   getEvent,
@@ -84,16 +84,20 @@ export default function EditEventPage() {
 
   // Convert event to form data format
   const initialData: Partial<EventFormData> = {
-    name: event.name,
+    title: event.title,
     description: event.description,
     category: event.category,
     tags: event.tags,
     startDate: event.startDate,
     endDate: event.endDate,
-    venue: event.venue,
+    location: {
+      name: event.venue,
+      address: event.address,
+      city: event.city,
+      island: event.island || '',
+    },
     coverImage: event.coverImage,
-    isPublic: event.isPublic,
-    settings: event.settings,
+    status: event.status as 'draft' | 'published',
   };
 
   return (

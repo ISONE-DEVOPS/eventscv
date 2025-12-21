@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import DashboardLayout from '../../components/layout/DashboardLayout';
+import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import {
   DataTable,
   Button,
@@ -24,21 +24,21 @@ import {
   type Transaction,
   type FinanceStats,
 } from '../../lib/services/finance';
-import { useAuthStore } from '../../lib/store/auth';
+import { useAuthStore } from '@/stores/authStore';
 import {
-  BanknotesIcon,
-  ArrowUpIcon,
-  ArrowDownIcon,
-  CurrencyDollarIcon,
-  ClockIcon,
-  ArrowPathIcon,
-  PlusIcon,
-  XMarkIcon,
-  ArrowDownTrayIcon,
-} from '@heroicons/react/24/outline';
+  Banknote,
+  ArrowUp,
+  ArrowDown,
+  DollarSign,
+  Clock,
+  RefreshCw,
+  Plus,
+  X,
+  Download,
+} from 'lucide-react';
 
 export default function FinancePage() {
-  const { user } = useAuthStore();
+  const { claims } = useAuthStore();
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [stats, setStats] = useState<FinanceStats | null>(null);
@@ -63,17 +63,17 @@ export default function FinancePage() {
 
   useEffect(() => {
     loadData();
-  }, [user]);
+  }, [claims]);
 
   const loadData = async () => {
-    if (!user?.organizationId) return;
+    if (!claims?.organizationId) return;
 
     setIsLoading(true);
     try {
       const [payoutsData, transactionsData, statsData] = await Promise.all([
-        getPayouts(user.organizationId, { pageSize: 100 }),
-        getTransactions(user.organizationId, { pageSize: 100 }),
-        getFinanceStats(user.organizationId),
+        getPayouts(claims.organizationId, {}, { pageSize: 100 }),
+        getTransactions(claims.organizationId, {}, { pageSize: 100 }),
+        getFinanceStats(claims.organizationId),
       ]);
 
       setPayouts(payoutsData.payouts);
@@ -87,7 +87,7 @@ export default function FinancePage() {
   };
 
   const handleRequestPayout = async () => {
-    if (!user?.organizationId || !payoutAmount) return;
+    if (!claims?.organizationId || !payoutAmount) return;
 
     const amount = parseFloat(payoutAmount);
     if (isNaN(amount) || amount <= 0) {
@@ -104,7 +104,7 @@ export default function FinancePage() {
     setRequestError('');
 
     try {
-      await requestPayout(user.organizationId, {
+      await requestPayout(claims.organizationId, {
         amount,
         method: payoutMethod as 'bank_transfer' | 'mobile_money',
       });
@@ -123,11 +123,11 @@ export default function FinancePage() {
   };
 
   const handleCancelPayout = async () => {
-    if (!payoutToCancel || !user?.organizationId) return;
+    if (!payoutToCancel || !claims?.organizationId) return;
 
     setIsCanceling(true);
     try {
-      await cancelPayout(user.organizationId, payoutToCancel.id);
+      await cancelPayout(claims.organizationId, payoutToCancel.id);
       await loadData();
       setCancelModalOpen(false);
       setPayoutToCancel(null);
@@ -199,7 +199,7 @@ export default function FinancePage() {
             className="p-2 hover:bg-red-50 rounded-lg"
             title="Cancelar"
           >
-            <XMarkIcon className="h-4 w-4 text-red-500" />
+            <X className="h-4 w-4 text-red-500" />
           </button>
         ),
     },
@@ -221,18 +221,18 @@ export default function FinancePage() {
       render: (transaction) => (
         <div className="flex items-center gap-2">
           {transaction.type === 'sale' ? (
-            <ArrowDownIcon className="h-4 w-4 text-green-500" />
+            <ArrowDown className="h-4 w-4 text-green-500" />
           ) : (
-            <ArrowUpIcon className="h-4 w-4 text-red-500" />
+            <ArrowUp className="h-4 w-4 text-red-500" />
           )}
           <span className="text-gray-600">
             {transaction.type === 'sale'
               ? 'Venda'
               : transaction.type === 'refund'
-              ? 'Reembolso'
-              : transaction.type === 'payout'
-              ? 'Levantamento'
-              : 'Taxa'}
+                ? 'Reembolso'
+                : transaction.type === 'payout'
+                  ? 'Levantamento'
+                  : 'Taxa'}
           </span>
         </div>
       ),
@@ -242,9 +242,8 @@ export default function FinancePage() {
       header: 'Valor',
       render: (transaction) => (
         <span
-          className={`font-bold ${
-            transaction.type === 'sale' ? 'text-green-600' : 'text-red-600'
-          }`}
+          className={`font-bold ${transaction.type === 'sale' ? 'text-green-600' : 'text-red-600'
+            }`}
         >
           {transaction.type === 'sale' ? '+' : '-'}
           {transaction.amount.toLocaleString('pt-PT')} CVE
@@ -309,19 +308,19 @@ export default function FinancePage() {
             <Button
               variant="outline"
               onClick={loadData}
-              leftIcon={<ArrowPathIcon className="h-5 w-5" />}
+              leftIcon={<RefreshCw className="h-5 w-5" />}
             >
               Atualizar
             </Button>
             <Button
               variant="outline"
-              leftIcon={<ArrowDownTrayIcon className="h-5 w-5" />}
+              leftIcon={<Download className="h-5 w-5" />}
             >
               Exportar
             </Button>
             <Button
               onClick={() => setRequestModalOpen(true)}
-              leftIcon={<PlusIcon className="h-5 w-5" />}
+              leftIcon={<Plus className="h-5 w-5" />}
               disabled={!stats || stats.availableBalance <= 0}
             >
               Solicitar Levantamento
@@ -335,23 +334,23 @@ export default function FinancePage() {
             <StatCard
               title="Saldo Disponível"
               value={`${stats.availableBalance.toLocaleString('pt-PT')} CVE`}
-              icon={<BanknotesIcon className="h-6 w-6" />}
+              icon={<Banknote className="h-6 w-6" />}
             />
             <StatCard
               title="Pendente"
               value={`${stats.pendingBalance.toLocaleString('pt-PT')} CVE`}
-              icon={<ClockIcon className="h-6 w-6" />}
+              icon={<Clock className="h-6 w-6" />}
             />
             <StatCard
               title="Total de Vendas"
               value={`${stats.totalSales.toLocaleString('pt-PT')} CVE`}
-              icon={<CurrencyDollarIcon className="h-6 w-6" />}
+              icon={<DollarSign className="h-6 w-6" />}
               change={{ value: 12.5, label: 'este mês' }}
             />
             <StatCard
               title="Levantado"
               value={`${stats.totalWithdrawn.toLocaleString('pt-PT')} CVE`}
-              icon={<ArrowUpIcon className="h-6 w-6" />}
+              icon={<ArrowUp className="h-6 w-6" />}
             />
           </div>
         )}
@@ -386,11 +385,10 @@ export default function FinancePage() {
                 setActiveTab('payouts');
                 setCurrentPage(1);
               }}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'payouts'
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'payouts'
                   ? 'border-purple-500 text-purple-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                }`}
             >
               Levantamentos ({payouts.length})
             </button>
@@ -399,11 +397,10 @@ export default function FinancePage() {
                 setActiveTab('transactions');
                 setCurrentPage(1);
               }}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'transactions'
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'transactions'
                   ? 'border-purple-500 text-purple-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                }`}
             >
               Transações ({transactions.length})
             </button>

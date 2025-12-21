@@ -16,6 +16,7 @@ import {
   startAfter,
   Timestamp,
   DocumentSnapshot,
+  collectionGroup,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -231,12 +232,44 @@ export async function getAllPayouts(
   filters?: PayoutFilters & { organizationId?: string },
   pagination?: PaginationOptions
 ): Promise<{ payouts: (Payout & { organizationName?: string })[]; lastDoc: DocumentSnapshot | null }> {
-  // This would ideally be done with a collectionGroup query
-  // For now, we'll need to implement this differently based on your data structure
-  // TODO: Implement collectionGroup query or Cloud Function
+  let q = query(
+    collectionGroup(db, PAYOUTS_SUBCOLLECTION),
+    orderBy('requestedAt', 'desc')
+  );
 
-  // Placeholder - in production, use collectionGroup or aggregate from Cloud Functions
-  return { payouts: [], lastDoc: null };
+  if (filters?.status) {
+    q = query(q, where('status', '==', filters.status));
+  }
+
+  if (filters?.method) {
+    q = query(q, where('method', '==', filters.method));
+  }
+
+  if (filters?.organizationId) {
+    q = query(q, where('organizationId', '==', filters.organizationId));
+  }
+
+  if (pagination?.pageSize) {
+    q = query(q, limit(pagination.pageSize));
+  }
+
+  if (pagination?.lastDoc) {
+    q = query(q, startAfter(pagination.lastDoc));
+  }
+
+  const snapshot = await getDocs(q);
+  const payouts = snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+    requestedAt: doc.data().requestedAt?.toDate(),
+    processedAt: doc.data().processedAt?.toDate(),
+    completedAt: doc.data().completedAt?.toDate(),
+    failedAt: doc.data().failedAt?.toDate(),
+  })) as Payout[];
+
+  const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+
+  return { payouts, lastDoc };
 }
 
 // Process a payout (Super Admin)
@@ -341,6 +374,44 @@ export async function getTransactions(
     id: doc.id,
     ...doc.data(),
     createdAt: doc.data().createdAt?.toDate(),
+  })) as Transaction[];
+
+  const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+
+  return { transactions, lastDoc };
+}
+
+// Get all transactions (Super Admin)
+export async function getAllTransactions(
+  filters?: TransactionFilters,
+  pagination?: PaginationOptions
+): Promise<{ transactions: Transaction[]; lastDoc: DocumentSnapshot | null }> {
+  let q = query(
+    collectionGroup(db, 'transactions'),
+    orderBy('createdAt', 'desc')
+  );
+
+  if (filters?.type) {
+    q = query(q, where('type', '==', filters.type));
+  }
+
+  if (filters?.eventId) {
+    q = query(q, where('eventId', '==', filters.eventId));
+  }
+
+  if (pagination?.pageSize) {
+    q = query(q, limit(pagination.pageSize));
+  }
+
+  if (pagination?.lastDoc) {
+    q = query(q, startAfter(pagination.lastDoc));
+  }
+
+  const snapshot = await getDocs(q);
+  const transactions = snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+    createdAt: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : new Date(doc.data().createdAt),
   })) as Transaction[];
 
   const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;

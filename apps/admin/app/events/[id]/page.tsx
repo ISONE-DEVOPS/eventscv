@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import DashboardLayout from '../../../components/layout/DashboardLayout';
+import { DashboardLayout } from '../../../components/layout/DashboardLayout';
 import {
   Button,
   Card,
@@ -13,6 +13,7 @@ import {
   Badge,
   ConfirmModal,
 } from '../../../components/ui';
+import { SharePanel } from '../../../components/events/SharePanel';
 import {
   getEvent,
   getTicketTypes,
@@ -23,20 +24,20 @@ import {
   type TicketType,
 } from '../../../lib/services/events';
 import {
-  ArrowLeftIcon,
-  PencilIcon,
-  TrashIcon,
-  GlobeAltIcon,
-  EyeSlashIcon,
-  CalendarIcon,
-  MapPinIcon,
-  TicketIcon,
-  CurrencyDollarIcon,
-  UserGroupIcon,
-  ClockIcon,
-  ShareIcon,
-  QrCodeIcon,
-} from '@heroicons/react/24/outline';
+  ArrowLeft,
+  Pencil,
+  Trash2,
+  Globe,
+  EyeOff,
+  Calendar,
+  MapPin,
+  Ticket,
+  DollarSign,
+  Users,
+  Clock,
+  Share2,
+  QrCode,
+} from 'lucide-react';
 
 export default function EventDetailPage() {
   const params = useParams();
@@ -49,6 +50,7 @@ export default function EventDetailPage() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [sharePanelOpen, setSharePanelOpen] = useState(false);
 
   useEffect(() => {
     loadEvent();
@@ -127,10 +129,10 @@ export default function EventDetailPage() {
     return null;
   }
 
-  const totalTickets = ticketTypes.reduce((sum, t) => sum + t.quantity, 0);
-  const totalSold = ticketTypes.reduce((sum, t) => sum + (t.sold || 0), 0);
+  const totalTickets = ticketTypes.reduce((sum, t) => sum + t.quantityTotal, 0);
+  const totalSold = ticketTypes.reduce((sum, t) => sum + (t.quantitySold || 0), 0);
   const totalRevenue = ticketTypes.reduce(
-    (sum, t) => sum + (t.sold || 0) * t.price,
+    (sum, t) => sum + (t.quantitySold || 0) * t.price,
     0
   );
   const checkInRate = totalSold > 0 ? ((event.checkIns || 0) / totalSold) * 100 : 0;
@@ -143,12 +145,12 @@ export default function EventDetailPage() {
           <div className="flex items-center gap-4">
             <Link href="/events">
               <button className="p-2 hover:bg-gray-100 rounded-lg">
-                <ArrowLeftIcon className="h-5 w-5 text-gray-500" />
+                <ArrowLeft className="h-5 w-5 text-gray-500" />
               </button>
             </Link>
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-gray-900">{event.name}</h1>
+                <h1 className="text-2xl font-bold text-gray-900">{event.title}</h1>
                 <StatusBadge status={event.status} />
               </div>
               <p className="text-gray-500 mt-1">
@@ -168,23 +170,23 @@ export default function EventDetailPage() {
               isLoading={isPublishing}
               leftIcon={
                 event.status === 'published' ? (
-                  <EyeSlashIcon className="h-5 w-5" />
+                  <EyeOff className="h-5 w-5" />
                 ) : (
-                  <GlobeAltIcon className="h-5 w-5" />
+                  <Globe className="h-5 w-5" />
                 )
               }
             >
               {event.status === 'published' ? 'Despublicar' : 'Publicar'}
             </Button>
             <Link href={`/events/${eventId}/edit`}>
-              <Button variant="secondary" leftIcon={<PencilIcon className="h-5 w-5" />}>
+              <Button variant="secondary" leftIcon={<Pencil className="h-5 w-5" />}>
                 Editar
               </Button>
             </Link>
             <Button
               variant="danger"
               onClick={() => setDeleteModalOpen(true)}
-              leftIcon={<TrashIcon className="h-5 w-5" />}
+              leftIcon={<Trash2 className="h-5 w-5" />}
             >
               Eliminar
             </Button>
@@ -196,25 +198,25 @@ export default function EventDetailPage() {
           <StatCard
             title="Bilhetes Vendidos"
             value={`${totalSold} / ${totalTickets}`}
-            icon={<TicketIcon className="h-6 w-6" />}
+            icon={<Ticket className="h-6 w-6" />}
             change={{ value: 12.5, label: 'vs. semana passada' }}
           />
           <StatCard
             title="Receita Total"
             value={`${totalRevenue.toLocaleString('pt-PT')} CVE`}
-            icon={<CurrencyDollarIcon className="h-6 w-6" />}
+            icon={<DollarSign className="h-6 w-6" />}
             change={{ value: 8.3, label: 'vs. semana passada' }}
           />
           <StatCard
             title="Check-ins"
             value={`${event.checkIns || 0}`}
-            icon={<UserGroupIcon className="h-6 w-6" />}
+            icon={<Users className="h-6 w-6" />}
             change={{ value: checkInRate, label: `${checkInRate.toFixed(1)}% taxa` }}
           />
           <StatCard
             title="Visualizações"
             value={event.views || 0}
-            icon={<GlobeAltIcon className="h-6 w-6" />}
+            icon={<Globe className="h-6 w-6" />}
             change={{ value: 25.3, label: 'vs. semana passada' }}
           />
         </div>
@@ -228,7 +230,7 @@ export default function EventDetailPage() {
               <Card padding="none">
                 <img
                   src={event.coverImage}
-                  alt={event.name}
+                  alt={event.title}
                   className="w-full h-64 object-cover rounded-lg"
                 />
               </Card>
@@ -265,8 +267,8 @@ export default function EventDetailPage() {
               <div className="space-y-4">
                 {ticketTypes.map((ticket) => {
                   const soldPercentage =
-                    ticket.quantity > 0
-                      ? ((ticket.sold || 0) / ticket.quantity) * 100
+                    ticket.quantityTotal > 0
+                      ? ((ticket.quantitySold || 0) / ticket.quantityTotal) * 100
                       : 0;
 
                   return (
@@ -288,7 +290,7 @@ export default function EventDetailPage() {
                             {ticket.price.toLocaleString('pt-PT')} CVE
                           </p>
                           <p className="text-sm text-gray-500">
-                            {ticket.sold || 0} / {ticket.quantity} vendidos
+                            {ticket.quantitySold || 0} / {ticket.quantityTotal} vendidos
                           </p>
                         </div>
                       </div>
@@ -314,7 +316,7 @@ export default function EventDetailPage() {
               <CardHeader title="Data e Hora" />
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
-                  <CalendarIcon className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <Calendar className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
                     <p className="font-medium text-gray-900">
                       {event.startDate.toLocaleDateString('pt-PT', {
@@ -344,13 +346,13 @@ export default function EventDetailPage() {
             <Card>
               <CardHeader title="Local" />
               <div className="flex items-start gap-3">
-                <MapPinIcon className="h-5 w-5 text-gray-400 mt-0.5" />
+                <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
                 <div>
-                  <p className="font-medium text-gray-900">{event.venue.name}</p>
-                  {event.venue.address && (
-                    <p className="text-sm text-gray-500">{event.venue.address}</p>
+                  <p className="font-medium text-gray-900">{event.venue}</p>
+                  {event.address && (
+                    <p className="text-sm text-gray-500">{event.address}</p>
                   )}
-                  <p className="text-sm text-gray-500">{event.venue.city}</p>
+                  <p className="text-sm text-gray-500">{event.city}</p>
                 </div>
               </div>
             </Card>
@@ -361,18 +363,21 @@ export default function EventDetailPage() {
               <div className="space-y-2">
                 <Link href={`/events/${eventId}/check-in`} className="block">
                   <button className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 rounded-lg">
-                    <QrCodeIcon className="h-5 w-5 text-gray-400" />
+                    <QrCode className="h-5 w-5 text-gray-400" />
                     <span className="text-gray-700">Iniciar Check-in</span>
                   </button>
                 </Link>
                 <Link href={`/events/${eventId}/orders`} className="block">
                   <button className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 rounded-lg">
-                    <TicketIcon className="h-5 w-5 text-gray-400" />
+                    <Ticket className="h-5 w-5 text-gray-400" />
                     <span className="text-gray-700">Ver Encomendas</span>
                   </button>
                 </Link>
-                <button className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 rounded-lg">
-                  <ShareIcon className="h-5 w-5 text-gray-400" />
+                <button
+                  onClick={() => setSharePanelOpen(true)}
+                  className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  <Share2 className="h-5 w-5 text-gray-400" />
                   <span className="text-gray-700">Partilhar Evento</span>
                 </button>
               </div>
@@ -420,12 +425,21 @@ export default function EventDetailPage() {
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={handleDelete}
         title="Eliminar Evento"
-        message={`Tem a certeza que deseja eliminar o evento "${event.name}"? Esta ação não pode ser desfeita e todos os bilhetes associados serão cancelados.`}
+        message={`Tem a certeza que deseja eliminar o evento "${event.title}"? Esta ação não pode ser desfeita e todos os bilhetes associados serão cancelados.`}
         confirmText="Eliminar"
         cancelText="Cancelar"
         variant="danger"
         isLoading={isDeleting}
       />
+
+      {/* Share Panel Modal */}
+      {event && (
+        <SharePanel
+          isOpen={sharePanelOpen}
+          onClose={() => setSharePanelOpen(false)}
+          event={event}
+        />
+      )}
     </DashboardLayout>
   );
 }
