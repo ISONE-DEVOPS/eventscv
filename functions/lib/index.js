@@ -39,7 +39,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.initializeSuperAdmin = exports.setSuperAdmin = void 0;
+exports.analytics = exports.createGuestRegistration = exports.generateEventQRCode = exports.transferWristbandBalance = exports.toggleWristbandBlock = exports.topUpWristband = exports.processNFCPayment = exports.activateWristband = exports.initializeSuperAdmin = exports.setSuperAdmin = void 0;
 const admin = __importStar(require("firebase-admin"));
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -74,15 +74,29 @@ Object.defineProperty(exports, "initializeSuperAdmin", { enumerable: true, get: 
 // ============================================
 // NFC FUNCTIONS
 // ============================================
-// export { syncOfflineTransactions } from './nfc/syncTransaction';
-// export { activateWristband } from './nfc/activateWristband';
-// export { checkWristbandBalance } from './nfc/checkBalance';
+var nfc_1 = require("./nfc");
+Object.defineProperty(exports, "activateWristband", { enumerable: true, get: function () { return nfc_1.activateWristband; } });
+Object.defineProperty(exports, "processNFCPayment", { enumerable: true, get: function () { return nfc_1.processNFCPayment; } });
+Object.defineProperty(exports, "topUpWristband", { enumerable: true, get: function () { return nfc_1.topUpWristband; } });
+Object.defineProperty(exports, "toggleWristbandBlock", { enumerable: true, get: function () { return nfc_1.toggleWristbandBlock; } });
+Object.defineProperty(exports, "transferWristbandBalance", { enumerable: true, get: function () { return nfc_1.transferWristbandBalance; } });
 // ============================================
 // NOTIFICATION FUNCTIONS
 // ============================================
 // export { sendPushNotification } from './notifications/sendPush';
 // export { sendEmail } from './notifications/sendEmail';
 // export { eventReminder } from './notifications/eventReminder';
+// ============================================
+// QR CODE & REGISTRATION FUNCTIONS
+// ============================================
+var generateEventQRCode_1 = require("./qrcode/generateEventQRCode");
+Object.defineProperty(exports, "generateEventQRCode", { enumerable: true, get: function () { return generateEventQRCode_1.generateEventQRCode; } });
+var createGuestRegistration_1 = require("./registration/createGuestRegistration");
+Object.defineProperty(exports, "createGuestRegistration", { enumerable: true, get: function () { return createGuestRegistration_1.createGuestRegistration; } });
+// ============================================
+// ANALYTICS FUNCTIONS
+// ============================================
+exports.analytics = __importStar(require("./analytics"));
 // ============================================
 // SCHEDULED FUNCTIONS
 // ============================================

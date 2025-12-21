@@ -1,4 +1,4 @@
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError, CallableRequest } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
 
 const db = admin.firestore();
@@ -24,12 +24,14 @@ interface PaymentResult {
  * Process an NFC payment from a wristband
  * Can be called by vendor terminals at events
  */
-export const processNFCPayment = functions
-  .region('europe-west1')
-  .https.onCall(async (data: ProcessPaymentData, context): Promise<PaymentResult> => {
+export const processNFCPayment = onCall(
+  { region: 'europe-west1' },
+  async (request: CallableRequest<ProcessPaymentData>): Promise<PaymentResult> => {
+    const context = request;
+    const data = request.data;
     // Check authentication (vendor or admin)
     if (!context.auth) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'unauthenticated',
         'Autenticação necessária.'
       );
@@ -39,21 +41,21 @@ export const processNFCPayment = functions
 
     // Validate input
     if (!wristbandId && !serialNumber) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'invalid-argument',
         'ID da pulseira ou número de série é obrigatório.'
       );
     }
 
     if (!amount || amount <= 0) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'invalid-argument',
         'Valor inválido. O montante deve ser positivo.'
       );
     }
 
     if (!vendorId || !eventId) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'invalid-argument',
         'Vendor e evento são obrigatórios.'
       );
@@ -74,7 +76,7 @@ export const processNFCPayment = functions
         .get();
 
       if (query.empty) {
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
           'not-found',
           'Pulseira não encontrada.'
         );
@@ -85,7 +87,7 @@ export const processNFCPayment = functions
     }
 
     if (!wristbandDoc.exists) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'not-found',
         'Pulseira não encontrada.'
       );
@@ -95,14 +97,14 @@ export const processNFCPayment = functions
 
     // Check wristband status
     if (wristband.status === 'blocked') {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'failed-precondition',
         'Pulseira bloqueada. Contacta o suporte.'
       );
     }
 
     if (wristband.status === 'inactive') {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'failed-precondition',
         'Pulseira inativa. Precisa ser ativada primeiro.'
       );
@@ -110,7 +112,7 @@ export const processNFCPayment = functions
 
     // Check balance
     if (wristband.balance < amount) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'failed-precondition',
         `Saldo insuficiente. Disponível: ${wristband.balance}$00`
       );
@@ -131,7 +133,7 @@ export const processNFCPayment = functions
       const freshBalance = freshWristband.data()?.balance || 0;
 
       if (freshBalance < amount) {
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
           'failed-precondition',
           'Saldo insuficiente.'
         );
@@ -211,16 +213,18 @@ export const processNFCPayment = functions
  * Top up a wristband balance
  * Can be done at event kiosks or online
  */
-export const topUpWristband = functions
-  .region('europe-west1')
-  .https.onCall(async (data: {
+export const topUpWristband = onCall(
+  { region: 'europe-west1' },
+  async (request: CallableRequest<{
     wristbandId: string;
     amount: number;
     paymentMethod: 'wallet' | 'card' | 'cash';
     eventId?: string;
-  }, context) => {
+  }>) => {
+    const context = request;
+    const data = request.data;
     if (!context.auth) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'unauthenticated',
         'Autenticação necessária.'
       );
@@ -230,7 +234,7 @@ export const topUpWristband = functions
     const userId = context.auth.uid;
 
     if (!wristbandId || !amount || amount <= 0) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'invalid-argument',
         'Dados inválidos.'
       );
@@ -239,7 +243,7 @@ export const topUpWristband = functions
     // Validate minimum top-up amount
     const minTopup = 500;
     if (amount < minTopup) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'invalid-argument',
         `Carregamento mínimo: ${minTopup}$00`
       );
@@ -250,7 +254,7 @@ export const topUpWristband = functions
     const wristbandDoc = await wristbandRef.get();
 
     if (!wristbandDoc.exists) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'not-found',
         'Pulseira não encontrada.'
       );
@@ -260,7 +264,7 @@ export const topUpWristband = functions
 
     // Verify ownership
     if (wristband.userId !== userId) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'permission-denied',
         'Não tens permissão para carregar esta pulseira.'
       );
@@ -272,7 +276,7 @@ export const topUpWristband = functions
       const walletBalance = userDoc.data()?.walletBalance || 0;
 
       if (walletBalance < amount) {
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
           'failed-precondition',
           `Saldo da carteira insuficiente. Disponível: ${walletBalance}$00`
         );
@@ -328,11 +332,13 @@ export const topUpWristband = functions
 /**
  * Block or unblock a wristband
  */
-export const toggleWristbandBlock = functions
-  .region('europe-west1')
-  .https.onCall(async (data: { wristbandId: string; block: boolean }, context) => {
+export const toggleWristbandBlock = onCall(
+  { region: 'europe-west1' },
+  async (request: CallableRequest<{ wristbandId: string; block: boolean }>) => {
+    const context = request;
+    const data = request.data;
     if (!context.auth) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'unauthenticated',
         'Autenticação necessária.'
       );
@@ -345,7 +351,7 @@ export const toggleWristbandBlock = functions
     const wristbandDoc = await wristbandRef.get();
 
     if (!wristbandDoc.exists) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'not-found',
         'Pulseira não encontrada.'
       );
@@ -355,7 +361,7 @@ export const toggleWristbandBlock = functions
 
     // Verify ownership
     if (wristband.userId !== userId) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'permission-denied',
         'Não tens permissão para modificar esta pulseira.'
       );
@@ -381,16 +387,18 @@ export const toggleWristbandBlock = functions
 /**
  * Transfer balance between wristbands or to wallet
  */
-export const transferWristbandBalance = functions
-  .region('europe-west1')
-  .https.onCall(async (data: {
+export const transferWristbandBalance = onCall(
+  { region: 'europe-west1' },
+  async (request: CallableRequest<{
     sourceWristbandId: string;
     destinationType: 'wristband' | 'wallet';
     destinationId?: string;
     amount: number;
-  }, context) => {
+  }>) => {
+    const context = request;
+    const data = request.data;
     if (!context.auth) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'unauthenticated',
         'Autenticação necessária.'
       );
@@ -400,7 +408,7 @@ export const transferWristbandBalance = functions
     const userId = context.auth.uid;
 
     if (amount <= 0) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'invalid-argument',
         'Valor inválido.'
       );
@@ -411,7 +419,7 @@ export const transferWristbandBalance = functions
     const sourceDoc = await sourceRef.get();
 
     if (!sourceDoc.exists) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'not-found',
         'Pulseira de origem não encontrada.'
       );
@@ -421,7 +429,7 @@ export const transferWristbandBalance = functions
 
     // Verify ownership
     if (source.userId !== userId) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'permission-denied',
         'Não tens permissão para esta operação.'
       );
@@ -429,7 +437,7 @@ export const transferWristbandBalance = functions
 
     // Check balance
     if (source.balance < amount) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'failed-precondition',
         'Saldo insuficiente.'
       );
@@ -457,7 +465,7 @@ export const transferWristbandBalance = functions
         const destDoc = await transaction.get(destRef);
 
         if (!destDoc.exists || destDoc.data()?.userId !== userId) {
-          throw new functions.https.HttpsError(
+          throw new HttpsError(
             'not-found',
             'Pulseira de destino não encontrada.'
           );

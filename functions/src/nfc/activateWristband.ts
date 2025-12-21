@@ -1,4 +1,4 @@
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError, CallableRequest } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
 
 const db = admin.firestore();
@@ -30,12 +30,14 @@ interface WristbandDoc {
 /**
  * Activate a new NFC wristband for a user
  */
-export const activateWristband = functions
-  .region('europe-west1')
-  .https.onCall(async (data: ActivateWristbandData, context) => {
+export const activateWristband = onCall(
+  { region: 'europe-west1' },
+  async (request: CallableRequest<ActivateWristbandData>) => {
+    const context = request;
+    const data = request.data;
     // Check authentication
     if (!context.auth) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'unauthenticated',
         'Tens de estar autenticado para ativar uma pulseira.'
       );
@@ -46,7 +48,7 @@ export const activateWristband = functions
 
     // Validate serial number format
     if (!serialNumber || !/^ECV-\d{4}-[A-Z0-9]{8}$/.test(serialNumber)) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'invalid-argument',
         'Número de série inválido. Formato: ECV-YYYY-XXXXXXXX'
       );
@@ -57,7 +59,7 @@ export const activateWristband = functions
     const inventoryDoc = await inventoryRef.get();
 
     if (!inventoryDoc.exists) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'not-found',
         'Número de série não encontrado. Verifica se está correto.'
       );
@@ -66,14 +68,14 @@ export const activateWristband = functions
     const inventory = inventoryDoc.data();
 
     if (inventory?.status === 'activated') {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'already-exists',
         'Esta pulseira já foi ativada por outro utilizador.'
       );
     }
 
     if (inventory?.status === 'blocked') {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'failed-precondition',
         'Esta pulseira está bloqueada e não pode ser ativada.'
       );
@@ -87,7 +89,7 @@ export const activateWristband = functions
       .get();
 
     if (!existingWristband.empty) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'already-exists',
         'Já tens esta pulseira associada à tua conta.'
       );
@@ -97,7 +99,7 @@ export const activateWristband = functions
     if (eventId) {
       const eventDoc = await db.collection('events').doc(eventId).get();
       if (!eventDoc.exists) {
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
           'not-found',
           'Evento não encontrado.'
         );

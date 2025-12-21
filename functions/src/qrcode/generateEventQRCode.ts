@@ -56,15 +56,17 @@ export const generateEventQRCode = onDocumentWritten(
         console.log(`QR code uploaded to: ${publicUrl}`);
 
         // Atualizar evento com informações do QR code
-        await event.data.after.ref.update({
-          'registration.enabled': true,
-          'registration.guestRegistrationEnabled': true,
-          'registration.customFields': [],
-          'registration.qrCodeUrl': publicUrl,
-          'registration.qrCodeData': eventUrl,
-          'registration.qrCodeGeneratedAt': admin.firestore.FieldValue.serverTimestamp(),
-          qrScans: 0,
-        });
+        if (event.data?.after) {
+          await event.data.after.ref.update({
+            'registration.enabled': true,
+            'registration.guestRegistrationEnabled': true,
+            'registration.customFields': [],
+            'registration.qrCodeUrl': publicUrl,
+            'registration.qrCodeData': eventUrl,
+            'registration.qrCodeGeneratedAt': admin.firestore.FieldValue.serverTimestamp(),
+            qrScans: 0,
+          });
+        }
 
         console.log(`Successfully generated QR code for event ${eventId}`);
       } catch (error) {
