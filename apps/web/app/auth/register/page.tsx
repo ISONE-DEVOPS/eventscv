@@ -15,6 +15,9 @@ import {
   Loader2,
   Check,
 } from 'lucide-react';
+import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, updateProfile } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '../../../lib/firebase';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -41,6 +44,31 @@ export default function RegisterPage() {
     { label: 'Um número', met: /[0-9]/.test(formData.password) },
   ];
 
+  // Helper function to create user document in Firestore
+  const createUserDocument = async (userId: string, email: string, name: string, phone?: string) => {
+    const userRef = doc(db, 'users', userId);
+    await setDoc(userRef, {
+      id: userId,
+      email,
+      name,
+      phone: phone || '',
+      preferredLanguage: 'pt',
+      notificationsEnabled: true,
+      wallet: {
+        balance: 0,
+        currency: 'CVE',
+        transactions: [],
+      },
+      loyalty: {
+        points: 0,
+        tier: 'bronze',
+      },
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      lastLoginAt: serverTimestamp(),
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -63,25 +91,79 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      // TODO: Implement Firebase authentication
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      router.push('/');
-    } catch (err) {
-      setError('Erro ao criar conta. Tenta novamente.');
+      // Create Firebase Auth account
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
+
+      // Update profile with display name
+      await updateProfile(userCredential.user, {
+        displayName: formData.name,
+      });
+
+      // Create user document in Firestore
+      await createUserDocument(
+        userCredential.user.uid,
+        formData.email,
+        formData.name,
+        formData.phone
+      );
+
+      // Redirect to profile page
+      router.push('/profile');
+    } catch (err: any) {
+      console.error('Registration error:', err);
+
+      // Handle specific Firebase errors
+      if (err.code === 'auth/email-already-in-use') {
+        setError('Este email já está registado. Tenta fazer login.');
+      } else if (err.code === 'auth/weak-password') {
+        setError('A password é muito fraca. Usa uma password mais forte.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Formato de email inválido.');
+      } else {
+        setError('Erro ao criar conta. Tenta novamente.');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleGoogleRegister = async () => {
+    if (!acceptTerms) {
+      setError('Tens de aceitar os termos e condições.');
+      return;
+    }
+
     setError('');
     setIsLoading(true);
+
     try {
-      // TODO: Implement Google authentication
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      router.push('/');
-    } catch (err) {
-      setError('Erro ao autenticar com Google. Tenta novamente.');
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+
+      // Create user document in Firestore
+      await createUserDocument(
+        result.user.uid,
+        result.user.email || '',
+        result.user.displayName || 'Utilizador',
+        result.user.phoneNumber || undefined
+      );
+
+      // Redirect to profile page
+      router.push('/profile');
+    } catch (err: any) {
+      console.error('Google auth error:', err);
+
+      if (err.code === 'auth/popup-closed-by-user') {
+        setError('Autenticação cancelada.');
+      } else if (err.code === 'auth/account-exists-with-different-credential') {
+        setError('Já existe uma conta com este email. Usa outro método de login.');
+      } else {
+        setError('Erro ao autenticar com Google. Tenta novamente.');
+      }
     } finally {
       setIsLoading(false);
     }
