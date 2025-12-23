@@ -124,89 +124,77 @@ export interface RealtimeStats {
 export async function getPlatformAnalytics(
   dateRange?: DateRange
 ): Promise<PlatformAnalytics> {
-  // Try to get aggregated stats first
-  const statsDoc = await getDoc(doc(db, 'analytics', 'stats'));
-  const stats = statsDoc.exists() ? statsDoc.data() : null;
+  // Get current and previous month for comparison
+  const now = new Date();
+  const currentMonthId = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-  // Use aggregated data if available, otherwise fallback to on-the-fly calculation (or combined approach)
-  // For granular distributions (charts), we currently still need to query or store more detailed aggregations.
+  const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const previousMonthId = `${previousMonth.getFullYear()}-${String(previousMonth.getMonth() + 1).padStart(2, '0')}`;
 
-  // Get users
-  const usersSnapshot = await getDocs(collection(db, 'users'));
+  // Get monthly analytics data
+  const [currentMonthDoc, previousMonthDoc] = await Promise.all([
+    getDoc(doc(db, 'analytics_monthly', currentMonthId)),
+    getDoc(doc(db, 'analytics_monthly', previousMonthId)),
+  ]);
+
+  const currentMonth = currentMonthDoc.exists() ? currentMonthDoc.data() : null;
+  const prevMonth = previousMonthDoc.exists() ? previousMonthDoc.data() : null;
+
+  // Get cumulative totals from all collections (for totals, not monthly)
+  const [usersSnapshot, orgsSnapshot, eventsSnapshot] = await Promise.all([
+    getDocs(collection(db, 'users')),
+    getDocs(collection(db, 'organizations')),
+    getDocs(collection(db, 'events')),
+  ]);
+
+  // Build distribution data
   const usersByRole: Record<string, number> = {};
-
   usersSnapshot.docs.forEach((doc) => {
     const data = doc.data();
     usersByRole[data.role] = (usersByRole[data.role] || 0) + 1;
   });
 
-  // Get organizations
-  const orgsSnapshot = await getDocs(collection(db, 'organizations'));
   const organizationsByStatus: Record<string, number> = {};
-
   orgsSnapshot.docs.forEach((doc) => {
     const data = doc.data();
     organizationsByStatus[data.status] = (organizationsByStatus[data.status] || 0) + 1;
   });
 
-  // Get events
-  const eventsSnapshot = await getDocs(collection(db, 'events'));
   const eventsByStatus: Record<string, number> = {};
-
   eventsSnapshot.docs.forEach((doc) => {
     const data = doc.data();
     eventsByStatus[data.status] = (eventsByStatus[data.status] || 0) + 1;
   });
 
-  // OVERVIEW DATA
-  // Prefer Cloud Function aggregated stats for totals
-  const totalUsers = stats?.totalUsers || usersSnapshot.size;
-  const totalOrganizations = orgsSnapshot.size; // We didn't aggregate orgs total yet in CF, so use snapshot
-  const totalEvents = stats?.totalEvents || eventsSnapshot.size;
-  const totalRevenue = stats?.totalRevenue || 0;
-  // Note: For totalRevenue, the manual calculation in previous code was iterating events. 
-  // If stats doc exists, we trust it. If not, we might ideally iterate, but to save reads/computation we rely on stats or simple fallback.
-  // Since we removed the manual iteration for revenue in this replacement to save lines, we rely on 'stats' or 0 fallback for now (assuming CF handles it).
+  // Calculate cumulative revenue and tickets from all monthly analytics
+  const allMonthlyDocs = await getDocs(
+    query(collection(db, 'analytics_monthly'), orderBy('id', 'desc'))
+  );
 
-  // But wait, the previous code iterated events for 'totalTicketsSold' and 'totalRevenue'. 
-  // Let's keep the iteration for those if stats is missing, or for checks. 
-  // Actually, to ensure accuracy before CF deployment, let's keep manual calc as backup or primary for now?
-  // No, the goal is optimization.
+  let totalRevenue = 0;
+  let totalTicketsSold = 0;
+  let platformFees = 0;
 
-  let calculatedRevenue = 0;
-  let calculatedTickets = 0;
-  if (!stats) {
-    eventsSnapshot.docs.forEach(doc => {
-      calculatedRevenue += doc.data().totalRevenue || 0;
-      calculatedTickets += doc.data().ticketsSold || 0;
-    });
-  }
+  allMonthlyDocs.docs.forEach((doc) => {
+    const data = doc.data();
+    totalRevenue += data.revenue || 0;
+    totalTicketsSold += data.ticketsSold || 0;
+    platformFees += data.platformFees || 0;
+  });
 
-  const finalRevenue = stats?.totalRevenue ?? calculatedRevenue;
-  const finalTickets = stats?.totalTicketsSold ?? calculatedTickets; // CF doesn't track ticketsSold yet? Check triggers.ts.
-  // Triggers.ts tracks: totalRevenue, totalTransactions, totalUsers, activeUsers, totalEvents, activeEvents. 
-  // It does NOT track totalTicketsSold yet.
-
-  // So we must calculate tickets manually or update CF. 
-  // For now, calculate tickets manually from eventsSnapshot.
-  let manualTicketsSold = 0;
-  eventsSnapshot.docs.forEach(d => manualTicketsSold += (d.data().ticketsSold || 0));
-
-  // Calculate platform fees (assuming 5% platform fee)
-  const platformFees = finalRevenue * 0.05;
-
-  // Calculate growth (simplified - would need historical data for accurate calculation)
-  const usersGrowth = 12.5; // Mock
-  const eventsGrowth = 8.3; // Mock
-  const revenueGrowth = 15.7; // Mock
+  // Use real growth data from current month analytics
+  const revenueGrowth = currentMonth?.revenueGrowth || 0;
+  const usersGrowth = currentMonth?.usersGrowth || 0;
+  const eventsGrowth = currentMonth ?
+    ((currentMonth.eventsCreated - (prevMonth?.eventsCreated || 0)) / (prevMonth?.eventsCreated || 1)) * 100 : 0;
 
   return {
     overview: {
-      totalUsers,
-      totalOrganizations,
-      totalEvents,
-      totalTicketsSold: manualTicketsSold,
-      totalRevenue: finalRevenue,
+      totalUsers: usersSnapshot.size,
+      totalOrganizations: orgsSnapshot.size,
+      totalEvents: eventsSnapshot.size,
+      totalTicketsSold,
+      totalRevenue,
       platformFees,
     },
     trends: {
@@ -218,6 +206,132 @@ export async function getPlatformAnalytics(
     organizationsByStatus,
     eventsByStatus,
   };
+}
+
+// ============================================
+// TOP PERFORMERS (Super Admin)
+// ============================================
+
+export interface TopEvent {
+  id: string;
+  name: string;
+  organizationName: string;
+  revenue: number;
+  ticketsSold: number;
+}
+
+export interface TopOrganization {
+  id: string;
+  name: string;
+  revenue: number;
+  eventsCount: number;
+  ticketsSold: number;
+}
+
+export async function getTopEvents(
+  limit: number = 10,
+  monthId?: string
+): Promise<TopEvent[]> {
+  // Use current month if not specified
+  const now = new Date();
+  const targetMonthId = monthId || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  const monthDoc = await getDoc(doc(db, 'analytics_monthly', targetMonthId));
+
+  if (!monthDoc.exists()) {
+    return [];
+  }
+
+  const monthData = monthDoc.data();
+  return (monthData.topEvents || []).slice(0, limit);
+}
+
+export async function getTopOrganizations(
+  limit: number = 10,
+  monthId?: string
+): Promise<TopOrganization[]> {
+  // Use current month if not specified
+  const now = new Date();
+  const targetMonthId = monthId || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  const monthDoc = await getDoc(doc(db, 'analytics_monthly', targetMonthId));
+
+  if (!monthDoc.exists()) {
+    return [];
+  }
+
+  const monthData = monthDoc.data();
+  return (monthData.topOrganizations || []).slice(0, limit);
+}
+
+export async function getRevenueChartData(months: number = 6): Promise<Array<{ month: string; value: number }>> {
+  const now = new Date();
+  const chartData: Array<{ month: string; value: number }> = [];
+
+  // Generate month IDs for the last N months
+  for (let i = months - 1; i >= 0; i--) {
+    const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const monthId = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
+
+    const monthDoc = await getDoc(doc(db, 'analytics_monthly', monthId));
+
+    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const monthName = monthNames[targetDate.getMonth()];
+
+    chartData.push({
+      month: monthName,
+      value: monthDoc.exists() ? (monthDoc.data().revenue || 0) : 0,
+    });
+  }
+
+  return chartData;
+}
+
+export async function getOrganizationGrowthData(months: number = 6): Promise<Array<{ month: string; count: number }>> {
+  const now = new Date();
+  const chartData: Array<{ month: string; count: number }> = [];
+  let cumulativeOrgs = 0;
+
+  // Generate month IDs for the last N months
+  for (let i = months - 1; i >= 0; i--) {
+    const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const monthId = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
+
+    const monthDoc = await getDoc(doc(db, 'analytics_monthly', monthId));
+
+    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const monthName = monthNames[targetDate.getMonth()];
+
+    cumulativeOrgs += monthDoc.exists() ? (monthDoc.data().newOrganizations || 0) : 0;
+
+    chartData.push({
+      month: monthName,
+      count: cumulativeOrgs,
+    });
+  }
+
+  return chartData;
+}
+
+export async function getDailyTicketSalesData(days: number = 30): Promise<Array<{ day: string; count: number }>> {
+  const now = new Date();
+  const chartData: Array<{ day: string; count: number }> = [];
+
+  // Generate date IDs for the last N days
+  for (let i = days - 1; i >= 0; i--) {
+    const targetDate = new Date(now);
+    targetDate.setDate(targetDate.getDate() - i);
+    const dateId = targetDate.toISOString().split('T')[0];
+
+    const dailyDoc = await getDoc(doc(db, 'analytics_daily', dateId));
+
+    chartData.push({
+      day: String(targetDate.getDate()).padStart(2, '0'),
+      count: dailyDoc.exists() ? (dailyDoc.data().ticketsSold || 0) : 0,
+    });
+  }
+
+  return chartData;
 }
 
 // ============================================

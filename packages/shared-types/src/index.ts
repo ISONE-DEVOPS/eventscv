@@ -1025,3 +1025,142 @@ export interface SupportTicketMessage {
   isInternal: boolean;
   createdAt: Date;
 }
+
+// ============================================
+// ANALYTICS & AGGREGATIONS
+// ============================================
+
+/**
+ * Daily analytics aggregation for platform-wide metrics
+ * Stored in /analytics_daily/{date} collection
+ */
+export interface DailyAnalytics {
+  id: string; // Format: YYYY-MM-DD
+  date: Date;
+
+  // Core metrics
+  revenue: number;
+  ticketsSold: number;
+  newUsers: number;
+  newOrganizations: number;
+  newEvents: number;
+  activeEvents: number;
+  platformFees: number;
+  refunds: number;
+
+  // Breakdowns
+  byCategory: Record<string, {
+    events: number;
+    tickets: number;
+    revenue: number;
+  }>;
+
+  byOrganization: Record<string, {
+    events: number;
+    tickets: number;
+    revenue: number;
+  }>;
+
+  // Payment methods
+  byPaymentMethod: Record<string, {
+    count: number;
+    volume: number;
+  }>;
+
+  // Metadata
+  createdAt: Date;
+  updatedAt?: Date;
+}
+
+/**
+ * Monthly analytics aggregation (rolled up from daily)
+ * Stored in /analytics_monthly/{month} collection
+ */
+export interface MonthlyAnalytics {
+  id: string; // Format: YYYY-MM
+  month: string; // "2025-12"
+  year: number;
+
+  // Core metrics
+  revenue: number;
+  ticketsSold: number;
+  newUsers: number;
+  newOrganizations: number;
+  eventsCreated: number;
+  platformFees: number;
+
+  // Trends (comparison to previous month)
+  revenueGrowth: number; // Percentage
+  ticketsGrowth: number;
+  usersGrowth: number;
+  organizationsGrowth: number;
+
+  // Top performers
+  topEvents: Array<{
+    id: string;
+    name: string;
+    organizationName: string;
+    revenue: number;
+    ticketsSold: number;
+  }>;
+
+  topOrganizations: Array<{
+    id: string;
+    name: string;
+    revenue: number;
+    eventsCount: number;
+    ticketsSold: number;
+  }>;
+
+  // Category breakdown
+  byCategory: Record<string, {
+    events: number;
+    tickets: number;
+    revenue: number;
+  }>;
+
+  // Metadata
+  createdAt: Date;
+}
+
+/**
+ * Platform analytics response (for API/UI)
+ */
+export interface PlatformAnalytics {
+  overview: {
+    totalRevenue: number;
+    totalTicketsSold: number;
+    totalUsers: number;
+    totalOrganizations: number;
+    totalEvents: number;
+    platformFees: number;
+    avgTicketPrice: number;
+  };
+
+  trends: {
+    revenue: Array<{ date: string; value: number }>;
+    tickets: Array<{ date: string; value: number }>;
+    organizations: Array<{ date: string; value: number }>;
+    users: Array<{ date: string; value: number }>;
+  };
+
+  comparison: {
+    revenueChange: number; // % vs previous period
+    ticketsChange: number;
+    usersChange: number;
+    organizationsChange: number;
+  };
+
+  distribution: {
+    byCategory: Array<{ category: string; count: number; revenue: number }>;
+    byStatus: Array<{ status: string; count: number }>;
+  };
+}
+
+/**
+ * Date range for analytics queries
+ */
+export interface DateRange {
+  start: Date;
+  end: Date;
+}
