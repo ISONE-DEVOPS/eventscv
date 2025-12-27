@@ -40,7 +40,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.editChatMessage = exports.sendChatMessage = exports.leaveChatRoom = exports.joinChatRoom = exports.createChatRoom = exports.onCalendarEventCreated = exports.getCalendarSubscribers = exports.getUserSubscriptions = exports.updateSubscriptionPreferences = exports.unsubscribeFromCalendar = exports.subscribeToCalendar = exports.listOrganizationCalendars = exports.getCalendarBySlug = exports.getCalendar = exports.deleteCalendar = exports.updateCalendar = exports.createCalendar = exports.onEquipmentRentalCreated = exports.updateRentalStatus = exports.createEquipmentRental = exports.calculateRentalPrice = exports.checkEquipmentAvailability = exports.searchTranscript = exports.editTranscriptSegment = exports.downloadTranscript = exports.getSessionTranscript = exports.processAudioChunk = exports.trackListener = exports.getTranslationSession = exports.updateSessionStatus = exports.endTranslationSession = exports.startTranslationSession = exports.autoGenerateInsights = exports.generateInsights = exports.createEventEmbedding = exports.generateDailyRecommendations = exports.getRecommendations = exports.setPosterAsCover = exports.generatePoster = exports.lyraChat = exports.analytics = exports.createGuestRegistration = exports.generateEventQRCode = exports.transferWristbandBalance = exports.toggleWristbandBlock = exports.topUpWristband = exports.processNFCPayment = exports.activateWristband = exports.initializeSuperAdmin = exports.setSuperAdmin = void 0;
-exports.getUserBadges = exports.awardBadge = exports.createBadge = exports.getUserStreak = exports.updateUserStreak = exports.redeemReward = exports.getAvailableRewards = exports.createReward = exports.getPointsHistory = exports.getUserPoints = exports.updateLeaderboardRank = exports.getLeaderboard = exports.getActiveChallenges = exports.updateChallengeProgress = exports.joinChallenge = exports.createChallenge = exports.claimAchievementReward = exports.unlockAchievement = exports.getUserAchievements = exports.createAchievement = exports.processScheduledBlasts = exports.getEventBlasts = exports.sendTestBlast = exports.getBlastStatus = exports.cancelBlast = exports.sendBlast = exports.createBlast = exports.calculateBlastRecipients = exports.onEventPublished = exports.unmuteUser = exports.muteUser = exports.flagMessage = exports.reactToMessage = exports.deleteChatMessage = void 0;
+exports.onTicketPurchased = exports.updateDashboardConfig = exports.getCompleteDashboard = exports.getLiveActivity = exports.getPriceCountdown = exports.getRecentBuyers = exports.getDashboardStats = exports.getUserBadges = exports.awardBadge = exports.createBadge = exports.getUserStreak = exports.updateUserStreak = exports.redeemReward = exports.getAvailableRewards = exports.createReward = exports.getPointsHistory = exports.getUserPoints = exports.updateLeaderboardRank = exports.getLeaderboard = exports.getActiveChallenges = exports.updateChallengeProgress = exports.joinChallenge = exports.createChallenge = exports.claimAchievementReward = exports.unlockAchievement = exports.getUserAchievements = exports.createAchievement = exports.processScheduledBlasts = exports.getEventBlasts = exports.sendTestBlast = exports.getBlastStatus = exports.cancelBlast = exports.sendBlast = exports.createBlast = exports.calculateBlastRecipients = exports.onEventPublished = exports.unmuteUser = exports.muteUser = exports.flagMessage = exports.reactToMessage = exports.deleteChatMessage = void 0;
 const admin = __importStar(require("firebase-admin"));
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -237,4 +237,18 @@ var gamification_6 = require("./gamification");
 Object.defineProperty(exports, "createBadge", { enumerable: true, get: function () { return gamification_6.createBadge; } });
 Object.defineProperty(exports, "awardBadge", { enumerable: true, get: function () { return gamification_6.awardBadge; } });
 Object.defineProperty(exports, "getUserBadges", { enumerable: true, get: function () { return gamification_6.getUserBadges; } });
+// ============================================
+// LIVE EVENT DASHBOARD
+// ============================================
+// Dashboard Stats
+var dashboard_1 = require("./dashboard");
+Object.defineProperty(exports, "getDashboardStats", { enumerable: true, get: function () { return dashboard_1.getDashboardStats; } });
+Object.defineProperty(exports, "getRecentBuyers", { enumerable: true, get: function () { return dashboard_1.getRecentBuyers; } });
+Object.defineProperty(exports, "getPriceCountdown", { enumerable: true, get: function () { return dashboard_1.getPriceCountdown; } });
+Object.defineProperty(exports, "getLiveActivity", { enumerable: true, get: function () { return dashboard_1.getLiveActivity; } });
+Object.defineProperty(exports, "getCompleteDashboard", { enumerable: true, get: function () { return dashboard_1.getCompleteDashboard; } });
+Object.defineProperty(exports, "updateDashboardConfig", { enumerable: true, get: function () { return dashboard_1.updateDashboardConfig; } });
+// Auto-triggers
+var dashboard_2 = require("./dashboard");
+Object.defineProperty(exports, "onTicketPurchased", { enumerable: true, get: function () { return dashboard_2.onTicketPurchased; } });
 //# sourceMappingURL=index.js.map

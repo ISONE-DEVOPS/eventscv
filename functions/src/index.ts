@@ -254,3 +254,22 @@ export {
   awardBadge,
   getUserBadges,
 } from './gamification';
+
+// ============================================
+// LIVE EVENT DASHBOARD
+// ============================================
+
+// Dashboard Stats
+export {
+  getDashboardStats,
+  getRecentBuyers,
+  getPriceCountdown,
+  getLiveActivity,
+  getCompleteDashboard,
+  updateDashboardConfig,
+} from './dashboard';
+
+// Auto-triggers
+export {
+  onTicketPurchased,
+} from './dashboard';
