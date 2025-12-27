@@ -100,7 +100,9 @@ export default function TeamPage() {
       await createInvitation(claims.organizationId, {
         email: inviteEmail,
         role: inviteRole,
+        permissions: [],
         invitedBy: user?.uid || '',
+        invitedByName: user?.displayName || user?.email || 'Admin',
       });
 
       await loadData();

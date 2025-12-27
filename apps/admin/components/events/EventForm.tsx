@@ -46,7 +46,7 @@ export default function EventForm({
   const router = useRouter();
 
   // Basic info
-  const [name, setName] = useState(initialData?.name || '');
+  const [name, setName] = useState(initialData?.title || '');
   const [description, setDescription] = useState(initialData?.description || '');
   const [category, setCategory] = useState(initialData?.category || '');
   const [tags, setTags] = useState<string[]>(initialData?.tags || []);
@@ -61,9 +61,9 @@ export default function EventForm({
   );
 
   // Venue
-  const [venueName, setVenueName] = useState(initialData?.venue?.name || '');
-  const [venueAddress, setVenueAddress] = useState(initialData?.venue?.address || '');
-  const [venueCity, setVenueCity] = useState(initialData?.venue?.city || '');
+  const [venueName, setVenueName] = useState(initialData?.location?.name || '');
+  const [venueAddress, setVenueAddress] = useState(initialData?.location?.address || '');
+  const [venueCity, setVenueCity] = useState(initialData?.location?.city || '');
 
   // Images
   const [coverImage, setCoverImage] = useState(initialData?.coverImage || '');

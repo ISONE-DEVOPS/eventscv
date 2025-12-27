@@ -76,3 +76,113 @@ export * as analytics from './analytics';
 // ============================================
 // export { dailyReports } from './scheduled/dailyReports';
 // export { cleanupOldData } from './scheduled/cleanupOldData';
+
+// ============================================
+// AI FUNCTIONS
+// ============================================
+
+// AI Chat Assistant (Lyra)
+export { chat as lyraChat } from './ai/chat/lyra';
+
+// AI Content Generation
+export {
+  generatePoster,
+  setPosterAsCover,
+} from './ai/generation/posterGenerator';
+
+// AI Recommendations
+export {
+  getRecommendations,
+  generateDailyRecommendations,
+  createEventEmbedding,
+} from './ai/recommendations/personalized';
+
+// AI Analytics & Insights
+export {
+  generateInsights,
+  autoGenerateInsights,
+} from './ai/analytics/insights';
+
+// ============================================
+// TRANSLATION SERVICE FUNCTIONS
+// ============================================
+
+// Translation Session Management
+export {
+  startTranslationSession,
+  endTranslationSession,
+  updateSessionStatus,
+  getTranslationSession,
+  trackListener,
+} from './translation/session';
+
+// Audio Processing & Real-time Translation
+export { processAudioChunk } from './translation/audioProcessor';
+
+// Transcript Management
+export {
+  getSessionTranscript,
+  downloadTranscript,
+  editTranscriptSegment,
+  searchTranscript,
+} from './translation/transcript';
+
+// Equipment Rental
+export {
+  checkEquipmentAvailability,
+  calculateRentalPrice,
+  createEquipmentRental,
+  updateRentalStatus,
+  onEquipmentRentalCreated,
+} from './translation/equipment';
+
+// ============================================
+// EVENT CALENDARS & SUBSCRIBERS
+// ============================================
+
+// Calendar CRUD Operations
+export {
+  createCalendar,
+  updateCalendar,
+  deleteCalendar,
+  getCalendar,
+  getCalendarBySlug,
+  listOrganizationCalendars,
+} from './calendars';
+
+// Subscription Management
+export {
+  subscribeToCalendar,
+  unsubscribeFromCalendar,
+  updateSubscriptionPreferences,
+  getUserSubscriptions,
+  getCalendarSubscribers,
+  onCalendarEventCreated,
+} from './calendars';
+
+// ============================================
+// EVENT CHAT SYSTEM
+// ============================================
+
+// Chat Room Management
+export {
+  createChatRoom,
+  joinChatRoom,
+  leaveChatRoom,
+} from './chat';
+
+// Message Management
+export {
+  sendChatMessage,
+  editChatMessage,
+  deleteChatMessage,
+  reactToMessage,
+  flagMessage,
+} from './chat';
+
+// Moderation
+export {
+  muteUser,
+  unmuteUser,
+  onEventPublished,
+} from './chat';

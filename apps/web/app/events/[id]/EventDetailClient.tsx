@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { getEvent } from '../../../lib/services/events';
 import { GuestRegistrationModal } from '../../../components/events/GuestRegistrationModal';
+import { ShareEvent } from '../../../components/event/ShareEvent';
+import { AddToCalendar } from '../../../components/event/AddToCalendar';
 
 // Mock event data (fallback)
 const mockEventData = {
@@ -211,9 +213,8 @@ export default function EventDetailClient() {
               >
                 <Heart className={`h-5 w-5 ${isFavorite ? 'fill-current' : ''}`} />
               </button>
-              <button className="p-2 rounded-full glass hover:bg-white/10 text-zinc-400 transition-colors">
-                <Share2 className="h-5 w-5" />
-              </button>
+              <ShareEvent event={event} />
+              <AddToCalendar event={event} />
             </div>
           </div>
         </div>

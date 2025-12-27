@@ -27,9 +27,11 @@ export type { Ticket, Order };
 // ============================================
 
 export interface TicketFilters {
-  status?: 'valid' | 'used' | 'cancelled' | 'refunded' | 'transferred';
+  status?: 'valid' | 'active' | 'used' | 'cancelled' | 'refunded' | 'transferred' | 'expired';
   ticketTypeId?: string;
   userId?: string;
+  organizationId?: string;
+  eventId?: string;
 }
 
 export interface PaginationOptions {
@@ -37,42 +39,100 @@ export interface PaginationOptions {
   lastDoc?: DocumentSnapshot;
 }
 
-// Get tickets for an event
+// Get tickets (can query by event or across all events for an organization)
 export async function getTickets(
-  eventId: string,
-  filters?: TicketFilters,
-  pagination?: PaginationOptions
+  filtersOrEventId: TicketFilters | string,
+  paginationOrFilters?: PaginationOptions | TicketFilters,
+  paginationOpt?: PaginationOptions
 ): Promise<{ tickets: Ticket[]; lastDoc: DocumentSnapshot | null }> {
-  let q = query(
-    collection(db, 'events', eventId, 'tickets'),
-    orderBy('purchasedAt', 'desc')
-  );
+  // Determine if first param is eventId (string) or filters (object)
+  const isEventIdFirst = typeof filtersOrEventId === 'string';
 
-  if (filters?.status) {
-    q = query(q, where('status', '==', filters.status));
+  if (isEventIdFirst) {
+    // Legacy signature: getTickets(eventId, filters?, pagination?)
+    const eventId = filtersOrEventId;
+    const filters = paginationOrFilters as TicketFilters | undefined;
+    const pagination = paginationOpt;
+
+    let q = query(
+      collection(db, 'events', eventId, 'tickets'),
+      orderBy('purchasedAt', 'desc')
+    );
+
+    if (filters?.status) {
+      q = query(q, where('status', '==', filters.status));
+    }
+
+    if (filters?.ticketTypeId) {
+      q = query(q, where('ticketTypeId', '==', filters.ticketTypeId));
+    }
+
+    if (pagination?.pageSize) {
+      q = query(q, limit(pagination.pageSize));
+    }
+
+    if (pagination?.lastDoc) {
+      q = query(q, startAfter(pagination.lastDoc));
+    }
+
+    const snapshot = await getDocs(q);
+    const tickets = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as Ticket[];
+
+    const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+
+    return { tickets, lastDoc };
+  } else {
+    // New signature: getTickets(filters, pagination?)
+    const filters = filtersOrEventId;
+    const pagination = paginationOrFilters as PaginationOptions | undefined;
+
+    // Query from top-level tickets collection (assumes it exists)
+    let q = query(
+      collection(db, 'tickets'),
+      orderBy('purchasedAt', 'desc')
+    );
+
+    if (filters.organizationId) {
+      q = query(q, where('organizationId', '==', filters.organizationId));
+    }
+
+    if (filters.eventId) {
+      q = query(q, where('eventId', '==', filters.eventId));
+    }
+
+    if (filters.status) {
+      q = query(q, where('status', '==', filters.status));
+    }
+
+    if (filters.ticketTypeId) {
+      q = query(q, where('ticketTypeId', '==', filters.ticketTypeId));
+    }
+
+    if (filters.userId) {
+      q = query(q, where('userId', '==', filters.userId));
+    }
+
+    if (pagination?.pageSize) {
+      q = query(q, limit(pagination.pageSize));
+    }
+
+    if (pagination?.lastDoc) {
+      q = query(q, startAfter(pagination.lastDoc));
+    }
+
+    const snapshot = await getDocs(q);
+    const tickets = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as Ticket[];
+
+    const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+
+    return { tickets, lastDoc };
   }
-
-  if (filters?.ticketTypeId) {
-    q = query(q, where('ticketTypeId', '==', filters.ticketTypeId));
-  }
-
-  if (pagination?.pageSize) {
-    q = query(q, limit(pagination.pageSize));
-  }
-
-  if (pagination?.lastDoc) {
-    q = query(q, startAfter(pagination.lastDoc));
-  }
-
-  const snapshot = await getDocs(q);
-  const tickets = snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  })) as Ticket[];
-
-  const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
-
-  return { tickets, lastDoc };
 }
 
 // Get a single ticket
@@ -281,10 +341,14 @@ export async function refundOrder(
 
 export interface TicketStats {
   total: number;
+  totalSold: number;
   valid: number;
   used: number;
+  pending: number;
   cancelled: number;
   refunded: number;
+  totalRevenue: number;
+  checkedIn: number;
   checkInRate: number;
 }
 

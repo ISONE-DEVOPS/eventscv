@@ -306,17 +306,42 @@ export async function getOrganizationStats(orgId: string): Promise<OrganizationS
 // ============================================
 
 export interface OrganizationSettings {
-  notifications: {
-    emailOnSale: boolean;
-    emailDailyReport: boolean;
-    emailWeeklyReport: boolean;
+  // Organization info
+  name?: string;
+  description?: string;
+  email?: string;
+  phone?: string;
+  website?: string;
+  logoUrl?: string;
+
+  // Bank details
+  bankDetails?: {
+    bankName: string;
+    accountNumber: string;
+    iban: string;
   };
-  checkout: {
+
+  // Notification preferences
+  notifications?: {
+    email?: boolean;
+    sms?: boolean;
+    salesAlerts?: boolean;
+    checkInAlerts?: boolean;
+    payoutAlerts?: boolean;
+    emailOnSale?: boolean;
+    emailDailyReport?: boolean;
+    emailWeeklyReport?: boolean;
+  };
+
+  // Checkout settings
+  checkout?: {
     allowGuestCheckout: boolean;
     requirePhone: boolean;
     requireAddress: boolean;
   };
-  branding: {
+
+  // Branding
+  branding?: {
     primaryColor?: string;
     secondaryColor?: string;
   };

@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 
 export default function TicketsPage() {
-  const { claims } = useAuthStore();
+  const { claims, user } = useAuthStore();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [stats, setStats] = useState<TicketStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -101,7 +101,7 @@ export default function TicketsPage() {
 
     setIsRefunding(true);
     try {
-      await refundTicket(ticketToRefund.id, 'Refund requested by admin');
+      await refundTicket(ticketToRefund.eventId, ticketToRefund.id, 'Refund requested by admin', user?.uid || 'admin');
       await loadData();
       setRefundModalOpen(false);
       setTicketToRefund(null);
