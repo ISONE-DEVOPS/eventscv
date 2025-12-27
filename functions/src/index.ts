@@ -186,3 +186,71 @@ export {
   unmuteUser,
   onEventPublished,
 } from './chat';
+
+// ============================================
+// EVENT BLASTS - MULTI-CHANNEL MESSAGING
+// ============================================
+
+// Blast Management
+export {
+  calculateBlastRecipients,
+  createBlast,
+  sendBlast,
+  cancelBlast,
+  getBlastStatus,
+  sendTestBlast,
+  getEventBlasts,
+} from './blasts';
+
+// Scheduled Blast Processing
+export {
+  processScheduledBlasts,
+} from './blasts';
+
+// ============================================
+// GAMIFICATION SYSTEM
+// ============================================
+
+// Achievements
+export {
+  createAchievement,
+  getUserAchievements,
+  unlockAchievement,
+  claimAchievementReward,
+} from './gamification';
+
+// Challenges
+export {
+  createChallenge,
+  joinChallenge,
+  updateChallengeProgress,
+  getActiveChallenges,
+} from './gamification';
+
+// Leaderboards
+export {
+  getLeaderboard,
+  updateLeaderboardRank,
+} from './gamification';
+
+// Points & Rewards
+export {
+  getUserPoints,
+  getPointsHistory,
+  createReward,
+  getAvailableRewards,
+  redeemReward,
+} from './gamification';
+
+// Streaks
+export {
+  updateUserStreak,
+  getUserStreak,
+} from './gamification';
+
+// Badges
+export {
+  createBadge,
+  awardBadge,
+  getUserBadges,
+} from './gamification';

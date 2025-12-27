@@ -1175,3 +1175,4 @@ export * from './calendar';
 export * from './webhooks';
 export * from './translation';
 export * from './chat';
+export * from './blasts';

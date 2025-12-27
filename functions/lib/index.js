@@ -40,7 +40,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.editChatMessage = exports.sendChatMessage = exports.leaveChatRoom = exports.joinChatRoom = exports.createChatRoom = exports.onCalendarEventCreated = exports.getCalendarSubscribers = exports.getUserSubscriptions = exports.updateSubscriptionPreferences = exports.unsubscribeFromCalendar = exports.subscribeToCalendar = exports.listOrganizationCalendars = exports.getCalendarBySlug = exports.getCalendar = exports.deleteCalendar = exports.updateCalendar = exports.createCalendar = exports.onEquipmentRentalCreated = exports.updateRentalStatus = exports.createEquipmentRental = exports.calculateRentalPrice = exports.checkEquipmentAvailability = exports.searchTranscript = exports.editTranscriptSegment = exports.downloadTranscript = exports.getSessionTranscript = exports.processAudioChunk = exports.trackListener = exports.getTranslationSession = exports.updateSessionStatus = exports.endTranslationSession = exports.startTranslationSession = exports.autoGenerateInsights = exports.generateInsights = exports.createEventEmbedding = exports.generateDailyRecommendations = exports.getRecommendations = exports.setPosterAsCover = exports.generatePoster = exports.lyraChat = exports.analytics = exports.createGuestRegistration = exports.generateEventQRCode = exports.transferWristbandBalance = exports.toggleWristbandBlock = exports.topUpWristband = exports.processNFCPayment = exports.activateWristband = exports.initializeSuperAdmin = exports.setSuperAdmin = void 0;
-exports.onEventPublished = exports.unmuteUser = exports.muteUser = exports.flagMessage = exports.reactToMessage = exports.deleteChatMessage = void 0;
+exports.getUserBadges = exports.awardBadge = exports.createBadge = exports.getUserStreak = exports.updateUserStreak = exports.redeemReward = exports.getAvailableRewards = exports.createReward = exports.getPointsHistory = exports.getUserPoints = exports.updateLeaderboardRank = exports.getLeaderboard = exports.getActiveChallenges = exports.updateChallengeProgress = exports.joinChallenge = exports.createChallenge = exports.claimAchievementReward = exports.unlockAchievement = exports.getUserAchievements = exports.createAchievement = exports.processScheduledBlasts = exports.getEventBlasts = exports.sendTestBlast = exports.getBlastStatus = exports.cancelBlast = exports.sendBlast = exports.createBlast = exports.calculateBlastRecipients = exports.onEventPublished = exports.unmuteUser = exports.muteUser = exports.flagMessage = exports.reactToMessage = exports.deleteChatMessage = void 0;
 const admin = __importStar(require("firebase-admin"));
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -187,4 +187,54 @@ var chat_3 = require("./chat");
 Object.defineProperty(exports, "muteUser", { enumerable: true, get: function () { return chat_3.muteUser; } });
 Object.defineProperty(exports, "unmuteUser", { enumerable: true, get: function () { return chat_3.unmuteUser; } });
 Object.defineProperty(exports, "onEventPublished", { enumerable: true, get: function () { return chat_3.onEventPublished; } });
+// ============================================
+// EVENT BLASTS - MULTI-CHANNEL MESSAGING
+// ============================================
+// Blast Management
+var blasts_1 = require("./blasts");
+Object.defineProperty(exports, "calculateBlastRecipients", { enumerable: true, get: function () { return blasts_1.calculateBlastRecipients; } });
+Object.defineProperty(exports, "createBlast", { enumerable: true, get: function () { return blasts_1.createBlast; } });
+Object.defineProperty(exports, "sendBlast", { enumerable: true, get: function () { return blasts_1.sendBlast; } });
+Object.defineProperty(exports, "cancelBlast", { enumerable: true, get: function () { return blasts_1.cancelBlast; } });
+Object.defineProperty(exports, "getBlastStatus", { enumerable: true, get: function () { return blasts_1.getBlastStatus; } });
+Object.defineProperty(exports, "sendTestBlast", { enumerable: true, get: function () { return blasts_1.sendTestBlast; } });
+Object.defineProperty(exports, "getEventBlasts", { enumerable: true, get: function () { return blasts_1.getEventBlasts; } });
+// Scheduled Blast Processing
+var blasts_2 = require("./blasts");
+Object.defineProperty(exports, "processScheduledBlasts", { enumerable: true, get: function () { return blasts_2.processScheduledBlasts; } });
+// ============================================
+// GAMIFICATION SYSTEM
+// ============================================
+// Achievements
+var gamification_1 = require("./gamification");
+Object.defineProperty(exports, "createAchievement", { enumerable: true, get: function () { return gamification_1.createAchievement; } });
+Object.defineProperty(exports, "getUserAchievements", { enumerable: true, get: function () { return gamification_1.getUserAchievements; } });
+Object.defineProperty(exports, "unlockAchievement", { enumerable: true, get: function () { return gamification_1.unlockAchievement; } });
+Object.defineProperty(exports, "claimAchievementReward", { enumerable: true, get: function () { return gamification_1.claimAchievementReward; } });
+// Challenges
+var gamification_2 = require("./gamification");
+Object.defineProperty(exports, "createChallenge", { enumerable: true, get: function () { return gamification_2.createChallenge; } });
+Object.defineProperty(exports, "joinChallenge", { enumerable: true, get: function () { return gamification_2.joinChallenge; } });
+Object.defineProperty(exports, "updateChallengeProgress", { enumerable: true, get: function () { return gamification_2.updateChallengeProgress; } });
+Object.defineProperty(exports, "getActiveChallenges", { enumerable: true, get: function () { return gamification_2.getActiveChallenges; } });
+// Leaderboards
+var gamification_3 = require("./gamification");
+Object.defineProperty(exports, "getLeaderboard", { enumerable: true, get: function () { return gamification_3.getLeaderboard; } });
+Object.defineProperty(exports, "updateLeaderboardRank", { enumerable: true, get: function () { return gamification_3.updateLeaderboardRank; } });
+// Points & Rewards
+var gamification_4 = require("./gamification");
+Object.defineProperty(exports, "getUserPoints", { enumerable: true, get: function () { return gamification_4.getUserPoints; } });
+Object.defineProperty(exports, "getPointsHistory", { enumerable: true, get: function () { return gamification_4.getPointsHistory; } });
+Object.defineProperty(exports, "createReward", { enumerable: true, get: function () { return gamification_4.createReward; } });
+Object.defineProperty(exports, "getAvailableRewards", { enumerable: true, get: function () { return gamification_4.getAvailableRewards; } });
+Object.defineProperty(exports, "redeemReward", { enumerable: true, get: function () { return gamification_4.redeemReward; } });
+// Streaks
+var gamification_5 = require("./gamification");
+Object.defineProperty(exports, "updateUserStreak", { enumerable: true, get: function () { return gamification_5.updateUserStreak; } });
+Object.defineProperty(exports, "getUserStreak", { enumerable: true, get: function () { return gamification_5.getUserStreak; } });
+// Badges
+var gamification_6 = require("./gamification");
+Object.defineProperty(exports, "createBadge", { enumerable: true, get: function () { return gamification_6.createBadge; } });
+Object.defineProperty(exports, "awardBadge", { enumerable: true, get: function () { return gamification_6.awardBadge; } });
+Object.defineProperty(exports, "getUserBadges", { enumerable: true, get: function () { return gamification_6.getUserBadges; } });
 //# sourceMappingURL=index.js.map
