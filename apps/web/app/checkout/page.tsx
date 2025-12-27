@@ -140,9 +140,9 @@ export default function CheckoutPage() {
       insufficient: hasInsufficientBalance,
     },
     {
-      id: 'sisp',
+      id: 'pagali',
       name: 'Cartão SISP / Vinti4',
-      description: 'Pagamento via SISP',
+      description: 'Pagamento via Pagali (Visa, Mastercard)',
       icon: CreditCard,
       available: true,
       insufficient: false,
@@ -185,13 +185,68 @@ export default function CheckoutPage() {
     try {
       const functions = getFunctions();
 
-      // TODO: Call appropriate Cloud Function based on payment method
-      // For now, simulating payment
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      // Step 1: Create order
+      const createOrderFn = httpsCallable(functions, 'createOrder');
+      const orderResult = await createOrderFn({
+        eventId,
+        tickets: selectedTickets.map((t) => ({
+          ticketTypeId: t.ticketTypeId,
+          ticketTypeName: t.ticketTypeName,
+          price: t.price,
+          currency: 'CVE',
+          quantity: t.quantity,
+        })),
+        buyerName: userDetails.name,
+        buyerEmail: userDetails.email,
+        buyerPhone: userDetails.phone,
+      });
 
-      // On success
-      setStep('success');
-      sessionStorage.removeItem(`tickets_${eventId}`);
+      const { orderId } = orderResult.data as any;
+
+      // Step 2: Process payment based on selected method
+      if (selectedPayment === 'pagali') {
+        // Initiate Pagali payment
+        const initiatePagaliPaymentFn = httpsCallable(functions, 'initiatePagaliPayment');
+        const pagaliResult = await initiatePagaliPaymentFn({
+          orderId,
+          eventId,
+          userId: 'current-user-id', // Should come from auth context
+          items: selectedTickets.map((t, index) => ({
+            name: t.ticketTypeName,
+            quantity: t.quantity,
+            itemNumber: `${t.ticketTypeId}-${index}`,
+            amount: t.price,
+            totalItem: t.price * t.quantity,
+          })),
+          total,
+          currencyCode: 'CVE',
+          returnUrl: `${window.location.origin}/checkout/return?orderId=${orderId}`,
+          notifyUrl: `${window.location.origin}/api/webhooks/pagali`,
+        });
+
+        const { paymentUrl, formData } = pagaliResult.data as any;
+
+        // Create a form and submit it to redirect to Pagali
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = paymentUrl;
+
+        Object.entries(formData).forEach(([key, value]) => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = key;
+          input.value = value as string;
+          form.appendChild(input);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+      } else if (selectedPayment === 'wallet') {
+        // TODO: Implement wallet payment
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        setStep('success');
+        sessionStorage.removeItem(`tickets_${eventId}`);
+      }
     } catch (err: any) {
       console.error('Payment failed:', err);
       setError(err.message || 'Falha no pagamento. Tenta novamente.');

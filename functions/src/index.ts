@@ -25,6 +25,13 @@ export { setSuperAdmin, initializeSuperAdmin } from './admin/setSuperAdmin';
 // ============================================
 // export { stripeWebhook } from './payments/stripeWebhook';
 
+// Pagali Payment Gateway (Cabo Verde)
+export {
+  initiatePagaliPayment,
+  pagaliWebhook,
+  getPagaliPaymentStatus,
+} from './payments/pagali';
+
 // ============================================
 // TICKET FUNCTIONS
 // ============================================
@@ -33,7 +40,12 @@ export { setSuperAdmin, initializeSuperAdmin } from './admin/setSuperAdmin';
 // ============================================
 // ORDER FUNCTIONS
 // ============================================
-// export { reserveTickets, releaseExpiredReservations } from './orders/reservations';
+export {
+  createOrder,
+  cancelOrder,
+  getOrder,
+  releaseExpiredOrders,
+} from './orders/createOrder';
 
 // ============================================
 // WALLET FUNCTIONS
