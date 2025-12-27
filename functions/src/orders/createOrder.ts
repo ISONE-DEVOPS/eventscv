@@ -4,7 +4,8 @@
  * Handles order creation before payment processing
  */
 
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError, CallableRequest } from 'firebase-functions/v2/https';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
 import * as admin from 'firebase-admin';
 
 const db = admin.firestore();
@@ -29,24 +30,24 @@ interface CreateOrderRequest {
  * Create Order
  * Creates a pending order before payment processing
  */
-export const createOrder = functions
-  .region('europe-west1')
-  .https.onCall(async (data: CreateOrderRequest, context) => {
+export const createOrder = onCall(
+  { region: 'europe-west1' },
+  async (request: CallableRequest<CreateOrderRequest>) => {
     // Verify authentication
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
+    if (!request.auth) {
+      throw new HttpsError(
         'unauthenticated',
         'User must be authenticated to create order'
       );
     }
 
-    const { eventId, tickets, buyerName, buyerEmail, buyerPhone } = data;
+    const { eventId, tickets, buyerName, buyerEmail, buyerPhone } = request.data;
 
     try {
       // Validate event exists
       const eventDoc = await db.collection('events').doc(eventId).get();
       if (!eventDoc.exists) {
-        throw new functions.https.HttpsError('not-found', 'Event not found');
+        throw new HttpsError('not-found', 'Event not found');
       }
 
       const eventData = eventDoc.data();
@@ -61,7 +62,7 @@ export const createOrder = functions
           .get();
 
         if (!ticketTypeDoc.exists) {
-          throw new functions.https.HttpsError(
+          throw new HttpsError(
             'not-found',
             `Ticket type ${ticket.ticketTypeName} not found`
           );
@@ -71,7 +72,7 @@ export const createOrder = functions
         const available = ticketTypeData?.available || 0;
 
         if (available < ticket.quantity) {
-          throw new functions.https.HttpsError(
+          throw new HttpsError(
             'resource-exhausted',
             `Insufficient tickets available for ${ticket.ticketTypeName}`
           );
@@ -87,7 +88,7 @@ export const createOrder = functions
         orderId: orderRef.id,
         eventId,
         eventTitle: eventData?.title || 'Event',
-        userId: context.auth.uid,
+        userId: request.auth.uid,
         tickets,
         total,
         currency: tickets[0]?.currency || 'CVE',
@@ -126,7 +127,7 @@ export const createOrder = functions
       await db.collection('order-logs').add({
         orderId: orderRef.id,
         eventId,
-        userId: context.auth.uid,
+        userId: request.auth.uid,
         action: 'created',
         total,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -141,46 +142,47 @@ export const createOrder = functions
     } catch (error: any) {
       console.error('Error creating order:', error);
 
-      if (error instanceof functions.https.HttpsError) {
+      if (error instanceof HttpsError) {
         throw error;
       }
 
-      throw new functions.https.HttpsError('internal', 'Failed to create order');
+      throw new HttpsError('internal', 'Failed to create order');
     }
-  });
+  }
+);
 
 /**
  * Cancel Order
  * Cancels a pending order and releases reserved tickets
  */
-export const cancelOrder = functions
-  .region('europe-west1')
-  .https.onCall(async (data: { orderId: string }, context) => {
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
+export const cancelOrder = onCall(
+  { region: 'europe-west1' },
+  async (request: CallableRequest<{ orderId: string }>) => {
+    if (!request.auth) {
+      throw new HttpsError(
         'unauthenticated',
         'User must be authenticated'
       );
     }
 
-    const { orderId } = data;
+    const { orderId } = request.data;
 
     try {
       const orderDoc = await db.collection('orders').doc(orderId).get();
       if (!orderDoc.exists) {
-        throw new functions.https.HttpsError('not-found', 'Order not found');
+        throw new HttpsError('not-found', 'Order not found');
       }
 
       const orderData = orderDoc.data();
-      if (orderData?.userId !== context.auth.uid) {
-        throw new functions.https.HttpsError(
+      if (orderData?.userId !== request.auth.uid) {
+        throw new HttpsError(
           'permission-denied',
           'Order does not belong to user'
         );
       }
 
       if (orderData?.paymentStatus !== 'pending') {
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
           'failed-precondition',
           'Cannot cancel non-pending order'
         );
@@ -213,7 +215,7 @@ export const cancelOrder = functions
       await db.collection('order-logs').add({
         orderId,
         eventId: orderData.eventId,
-        userId: context.auth.uid,
+        userId: request.auth.uid,
         action: 'cancelled',
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
@@ -222,39 +224,40 @@ export const cancelOrder = functions
     } catch (error: any) {
       console.error('Error cancelling order:', error);
 
-      if (error instanceof functions.https.HttpsError) {
+      if (error instanceof HttpsError) {
         throw error;
       }
 
-      throw new functions.https.HttpsError('internal', 'Failed to cancel order');
+      throw new HttpsError('internal', 'Failed to cancel order');
     }
-  });
+  }
+);
 
 /**
  * Get Order
  * Retrieves order details
  */
-export const getOrder = functions
-  .region('europe-west1')
-  .https.onCall(async (data: { orderId: string }, context) => {
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
+export const getOrder = onCall(
+  { region: 'europe-west1' },
+  async (request: CallableRequest<{ orderId: string }>) => {
+    if (!request.auth) {
+      throw new HttpsError(
         'unauthenticated',
         'User must be authenticated'
       );
     }
 
-    const { orderId } = data;
+    const { orderId } = request.data;
 
     try {
       const orderDoc = await db.collection('orders').doc(orderId).get();
       if (!orderDoc.exists) {
-        throw new functions.https.HttpsError('not-found', 'Order not found');
+        throw new HttpsError('not-found', 'Order not found');
       }
 
       const orderData = orderDoc.data();
-      if (orderData?.userId !== context.auth.uid) {
-        throw new functions.https.HttpsError(
+      if (orderData?.userId !== request.auth.uid) {
+        throw new HttpsError(
           'permission-denied',
           'Order does not belong to user'
         );
@@ -267,21 +270,24 @@ export const getOrder = functions
     } catch (error: any) {
       console.error('Error getting order:', error);
 
-      if (error instanceof functions.https.HttpsError) {
+      if (error instanceof HttpsError) {
         throw error;
       }
 
-      throw new functions.https.HttpsError('internal', 'Failed to get order');
+      throw new HttpsError('internal', 'Failed to get order');
     }
-  });
+  }
+);
 
 /**
  * Scheduled function to release expired order reservations
  */
-export const releaseExpiredOrders = functions
-  .region('europe-west1')
-  .pubsub.schedule('every 5 minutes')
-  .onRun(async (context) => {
+export const releaseExpiredOrders = onSchedule(
+  {
+    schedule: 'every 5 minutes',
+    region: 'europe-west1',
+  },
+  async () => {
     const now = admin.firestore.Timestamp.now();
 
     // Find expired orders
@@ -338,5 +344,5 @@ export const releaseExpiredOrders = functions
     });
 
     await Promise.all(promises);
-    return null;
-  });
+  }
+);

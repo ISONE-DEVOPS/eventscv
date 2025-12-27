@@ -5,9 +5,8 @@
  * Supports Vinti4 network (Visa, Mastercard) payments.
  */
 
-import * as functions from 'firebase-functions';
+import { onCall, onRequest, HttpsError, CallableRequest } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
-import axios from 'axios';
 
 const db = admin.firestore();
 
@@ -47,37 +46,37 @@ interface PagaliPaymentRequest {
 }
 
 interface PagaliPaymentResponse {
-  orderId: string;
-  paymentStatus: 'Completed' | 'Error';
+  order_id: string;
+  payment_status: 'Completed' | 'Error';
 }
 
 /**
  * Initiate Pagali Payment
  * Creates payment order and returns Pagali payment page URL
  */
-export const initiatePagaliPayment = functions
-  .region('europe-west1')
-  .https.onCall(async (data: PagaliPaymentRequest, context) => {
+export const initiatePagaliPayment = onCall(
+  { region: 'europe-west1' },
+  async (request: CallableRequest<PagaliPaymentRequest>) => {
     // Verify authentication
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
+    if (!request.auth) {
+      throw new HttpsError(
         'unauthenticated',
         'User must be authenticated to initiate payment'
       );
     }
 
-    const { orderId, eventId, userId, items, total, currencyCode, returnUrl, notifyUrl } = data;
+    const { orderId, eventId, userId, items, total, currencyCode, returnUrl, notifyUrl } = request.data;
 
     try {
       // Validate order exists and belongs to user
       const orderDoc = await db.collection('orders').doc(orderId).get();
       if (!orderDoc.exists) {
-        throw new functions.https.HttpsError('not-found', 'Order not found');
+        throw new HttpsError('not-found', 'Order not found');
       }
 
       const orderData = orderDoc.data();
-      if (orderData?.userId !== context.auth.uid) {
-        throw new functions.https.HttpsError(
+      if (orderData?.userId !== request.auth.uid) {
+        throw new HttpsError(
           'permission-denied',
           'Order does not belong to user'
         );
@@ -144,17 +143,18 @@ export const initiatePagaliPayment = functions
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-      throw new functions.https.HttpsError('internal', 'Failed to initiate payment');
+      throw new HttpsError('internal', 'Failed to initiate payment');
     }
-  });
+  }
+);
 
 /**
  * Pagali Payment Webhook
  * Receives payment status from Pagali after payment completion
  */
-export const pagaliWebhook = functions
-  .region('europe-west1')
-  .https.onRequest(async (req, res) => {
+export const pagaliWebhook = onRequest(
+  { region: 'europe-west1' },
+  async (req, res) => {
     // Only accept POST requests
     if (req.method !== 'POST') {
       res.status(405).send('Method Not Allowed');
@@ -220,7 +220,8 @@ export const pagaliWebhook = functions
       console.error('Error processing Pagali webhook:', error);
       res.status(500).send('Internal Server Error');
     }
-  });
+  }
+);
 
 /**
  * Process successful payment
@@ -311,27 +312,27 @@ function generateQRCodeData(orderId: string, ticketIndex: number): string {
  * Get Pagali Payment Status
  * Check payment status for an order
  */
-export const getPagaliPaymentStatus = functions
-  .region('europe-west1')
-  .https.onCall(async (data: { orderId: string }, context) => {
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
+export const getPagaliPaymentStatus = onCall(
+  { region: 'europe-west1' },
+  async (request: CallableRequest<{ orderId: string }>) => {
+    if (!request.auth) {
+      throw new HttpsError(
         'unauthenticated',
         'User must be authenticated'
       );
     }
 
-    const { orderId } = data;
+    const { orderId } = request.data;
 
     try {
       const orderDoc = await db.collection('orders').doc(orderId).get();
       if (!orderDoc.exists) {
-        throw new functions.https.HttpsError('not-found', 'Order not found');
+        throw new HttpsError('not-found', 'Order not found');
       }
 
       const orderData = orderDoc.data();
-      if (orderData?.userId !== context.auth.uid) {
-        throw new functions.https.HttpsError(
+      if (orderData?.userId !== request.auth.uid) {
+        throw new HttpsError(
           'permission-denied',
           'Order does not belong to user'
         );
@@ -346,6 +347,7 @@ export const getPagaliPaymentStatus = functions
       };
     } catch (error: any) {
       console.error('Error getting Pagali payment status:', error);
-      throw new functions.https.HttpsError('internal', 'Failed to get payment status');
+      throw new HttpsError('internal', 'Failed to get payment status');
     }
-  });
+  }
+);
