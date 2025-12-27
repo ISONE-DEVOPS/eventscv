@@ -273,3 +273,30 @@ export {
 export {
   onTicketPurchased,
 } from './dashboard';
+
+// ============================================
+// WAITLIST & DYNAMIC PRICING
+// ============================================
+
+// Waitlist Management
+export {
+  joinWaitlist,
+  getWaitlistPosition,
+  cancelWaitlistEntry,
+  notifyWaitlist,
+  getUserWaitlists,
+} from './waitlist';
+
+// Dynamic Pricing
+export {
+  configureDynamicPricing,
+  getPriceRecommendation,
+  applyPriceChange,
+  getPriceHistory,
+} from './waitlist';
+
+// Auto-triggers
+export {
+  processAutoPricing,
+  onTicketCancelled,
+} from './waitlist';

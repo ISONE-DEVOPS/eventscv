@@ -1177,3 +1177,4 @@ export * from './translation';
 export * from './chat';
 export * from './blasts';
 export * from './dashboard';
+export * from './waitlist';

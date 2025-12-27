@@ -40,7 +40,8 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.editChatMessage = exports.sendChatMessage = exports.leaveChatRoom = exports.joinChatRoom = exports.createChatRoom = exports.onCalendarEventCreated = exports.getCalendarSubscribers = exports.getUserSubscriptions = exports.updateSubscriptionPreferences = exports.unsubscribeFromCalendar = exports.subscribeToCalendar = exports.listOrganizationCalendars = exports.getCalendarBySlug = exports.getCalendar = exports.deleteCalendar = exports.updateCalendar = exports.createCalendar = exports.onEquipmentRentalCreated = exports.updateRentalStatus = exports.createEquipmentRental = exports.calculateRentalPrice = exports.checkEquipmentAvailability = exports.searchTranscript = exports.editTranscriptSegment = exports.downloadTranscript = exports.getSessionTranscript = exports.processAudioChunk = exports.trackListener = exports.getTranslationSession = exports.updateSessionStatus = exports.endTranslationSession = exports.startTranslationSession = exports.autoGenerateInsights = exports.generateInsights = exports.createEventEmbedding = exports.generateDailyRecommendations = exports.getRecommendations = exports.setPosterAsCover = exports.generatePoster = exports.lyraChat = exports.analytics = exports.createGuestRegistration = exports.generateEventQRCode = exports.transferWristbandBalance = exports.toggleWristbandBlock = exports.topUpWristband = exports.processNFCPayment = exports.activateWristband = exports.initializeSuperAdmin = exports.setSuperAdmin = void 0;
-exports.onTicketPurchased = exports.updateDashboardConfig = exports.getCompleteDashboard = exports.getLiveActivity = exports.getPriceCountdown = exports.getRecentBuyers = exports.getDashboardStats = exports.getUserBadges = exports.awardBadge = exports.createBadge = exports.getUserStreak = exports.updateUserStreak = exports.redeemReward = exports.getAvailableRewards = exports.createReward = exports.getPointsHistory = exports.getUserPoints = exports.updateLeaderboardRank = exports.getLeaderboard = exports.getActiveChallenges = exports.updateChallengeProgress = exports.joinChallenge = exports.createChallenge = exports.claimAchievementReward = exports.unlockAchievement = exports.getUserAchievements = exports.createAchievement = exports.processScheduledBlasts = exports.getEventBlasts = exports.sendTestBlast = exports.getBlastStatus = exports.cancelBlast = exports.sendBlast = exports.createBlast = exports.calculateBlastRecipients = exports.onEventPublished = exports.unmuteUser = exports.muteUser = exports.flagMessage = exports.reactToMessage = exports.deleteChatMessage = void 0;
+exports.getPriceHistory = exports.applyPriceChange = exports.getPriceRecommendation = exports.configureDynamicPricing = exports.getUserWaitlists = exports.notifyWaitlist = exports.cancelWaitlistEntry = exports.getWaitlistPosition = exports.joinWaitlist = exports.onTicketPurchased = exports.updateDashboardConfig = exports.getCompleteDashboard = exports.getLiveActivity = exports.getPriceCountdown = exports.getRecentBuyers = exports.getDashboardStats = exports.getUserBadges = exports.awardBadge = exports.createBadge = exports.getUserStreak = exports.updateUserStreak = exports.redeemReward = exports.getAvailableRewards = exports.createReward = exports.getPointsHistory = exports.getUserPoints = exports.updateLeaderboardRank = exports.getLeaderboard = exports.getActiveChallenges = exports.updateChallengeProgress = exports.joinChallenge = exports.createChallenge = exports.claimAchievementReward = exports.unlockAchievement = exports.getUserAchievements = exports.createAchievement = exports.processScheduledBlasts = exports.getEventBlasts = exports.sendTestBlast = exports.getBlastStatus = exports.cancelBlast = exports.sendBlast = exports.createBlast = exports.calculateBlastRecipients = exports.onEventPublished = exports.unmuteUser = exports.muteUser = exports.flagMessage = exports.reactToMessage = exports.deleteChatMessage = void 0;
+exports.onTicketCancelled = exports.processAutoPricing = void 0;
 const admin = __importStar(require("firebase-admin"));
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -251,4 +252,24 @@ Object.defineProperty(exports, "updateDashboardConfig", { enumerable: true, get:
 // Auto-triggers
 var dashboard_2 = require("./dashboard");
 Object.defineProperty(exports, "onTicketPurchased", { enumerable: true, get: function () { return dashboard_2.onTicketPurchased; } });
+// ============================================
+// WAITLIST & DYNAMIC PRICING
+// ============================================
+// Waitlist Management
+var waitlist_1 = require("./waitlist");
+Object.defineProperty(exports, "joinWaitlist", { enumerable: true, get: function () { return waitlist_1.joinWaitlist; } });
+Object.defineProperty(exports, "getWaitlistPosition", { enumerable: true, get: function () { return waitlist_1.getWaitlistPosition; } });
+Object.defineProperty(exports, "cancelWaitlistEntry", { enumerable: true, get: function () { return waitlist_1.cancelWaitlistEntry; } });
+Object.defineProperty(exports, "notifyWaitlist", { enumerable: true, get: function () { return waitlist_1.notifyWaitlist; } });
+Object.defineProperty(exports, "getUserWaitlists", { enumerable: true, get: function () { return waitlist_1.getUserWaitlists; } });
+// Dynamic Pricing
+var waitlist_2 = require("./waitlist");
+Object.defineProperty(exports, "configureDynamicPricing", { enumerable: true, get: function () { return waitlist_2.configureDynamicPricing; } });
+Object.defineProperty(exports, "getPriceRecommendation", { enumerable: true, get: function () { return waitlist_2.getPriceRecommendation; } });
+Object.defineProperty(exports, "applyPriceChange", { enumerable: true, get: function () { return waitlist_2.applyPriceChange; } });
+Object.defineProperty(exports, "getPriceHistory", { enumerable: true, get: function () { return waitlist_2.getPriceHistory; } });
+// Auto-triggers
+var waitlist_3 = require("./waitlist");
+Object.defineProperty(exports, "processAutoPricing", { enumerable: true, get: function () { return waitlist_3.processAutoPricing; } });
+Object.defineProperty(exports, "onTicketCancelled", { enumerable: true, get: function () { return waitlist_3.onTicketCancelled; } });
 //# sourceMappingURL=index.js.map
