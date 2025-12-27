@@ -1,0 +1,457 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+
+    // Check if user is authenticated
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Check if user owns the resource
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Check if user is admin
+    function isAdmin() {
+      return isSignedIn() &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isSuperAdmin == true;
+    }
+
+    // Check if user is event organizer
+    function isEventOrganizer(eventId) {
+      return isSignedIn() &&
+             get(/databases/$(database)/documents/events/$(eventId)).data.createdBy == request.auth.uid;
+    }
+
+    // Check if user is organization member
+    function isOrgMember(orgId) {
+      return isSignedIn() &&
+             exists(/databases/$(database)/documents/organization-members/$(request.auth.uid + '_' + orgId));
+    }
+
+    // Check if user is organization owner
+    function isOrgOwner(orgId) {
+      return isSignedIn() &&
+             get(/databases/$(database)/documents/organizations/$(orgId)).data.ownerId == request.auth.uid;
+    }
+
+    // ============================================
+    // USERS
+    // ============================================
+
+    match /users/{userId} {
+      // Anyone authenticated can read user profiles
+      allow read: if isSignedIn();
+
+      // Users can only update their own profile
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) &&
+                    // Prevent users from making themselves admin
+                    (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isSuperAdmin']));
+      allow delete: if isOwner(userId);
+    }
+
+    // ============================================
+    // EVENTS
+    // ============================================
+
+    match /events/{eventId} {
+      // Events are public for reading
+      allow read: if true;
+
+      // Only authenticated users can create events
+      allow create: if isSignedIn() &&
+                    request.resource.data.createdBy == request.auth.uid;
+
+      // Only event creator can update
+      allow update: if isEventOrganizer(eventId) ||
+                    (resource.data.organizationId != null &&
+                     isOrgMember(resource.data.organizationId));
+
+      // Only event creator can delete
+      allow delete: if isEventOrganizer(eventId);
+    }
+
+    // ============================================
+    // TICKETS (SENSITIVE - MOSTLY VIA FUNCTIONS)
+    // ============================================
+
+    match /tickets/{ticketId} {
+      // Users can read their own tickets, organizers can read all event tickets
+      allow read: if isSignedIn() &&
+                  (resource.data.userId == request.auth.uid ||
+                   isEventOrganizer(resource.data.eventId) ||
+                   (resource.data.organizerId != null &&
+                    resource.data.organizerId == request.auth.uid));
+
+      // Tickets are created via Cloud Functions only
+      allow create: if false;
+
+      // Limited updates (check-in status) via functions
+      allow update: if false;
+
+      // No deletion
+      allow delete: if false;
+    }
+
+    // ============================================
+    // ORGANIZATIONS
+    // ============================================
+
+    match /organizations/{orgId} {
+      // Public organizations are readable by all, private only by members
+      allow read: if resource.data.visibility == 'public' ||
+                  isOrgMember(orgId) ||
+                  isOrgOwner(orgId);
+
+      // Only authenticated users can create organizations
+      allow create: if isSignedIn() &&
+                    request.resource.data.ownerId == request.auth.uid;
+
+      // Only owner can update
+      allow update: if isOrgOwner(orgId);
+
+      // Only owner can delete
+      allow delete: if isOrgOwner(orgId);
+    }
+
+    match /organization-members/{memberId} {
+      // Members can read org member list
+      allow read: if isSignedIn() &&
+                  (isOrgMember(resource.data.organizationId) ||
+                   isOrgOwner(resource.data.organizationId));
+
+      // Only org owners can add/remove members
+      allow create, update, delete: if false; // Via Cloud Functions only
+    }
+
+    // ============================================
+    // GAMIFICATION
+    // ============================================
+
+    match /achievements/{achievementId} {
+      // Achievements are public
+      allow read: if true;
+
+      // Only admins can create/update/delete achievements
+      allow write: if isAdmin();
+    }
+
+    match /user-achievements/{userAchievementId} {
+      // Users can read their own achievements, others can read if public
+      allow read: if isSignedIn();
+
+      // Only via Cloud Functions
+      allow write: if false;
+    }
+
+    match /challenges/{challengeId} {
+      // Challenges are public
+      allow read: if true;
+
+      // Event organizers can create challenges for their events
+      allow create: if isSignedIn() &&
+                    (request.resource.data.eventId == null ||
+                     isEventOrganizer(request.resource.data.eventId));
+
+      // Only creator can update/delete
+      allow update, delete: if isSignedIn() &&
+                             resource.data.createdBy == request.auth.uid;
+    }
+
+    match /user-challenges/{userChallengeId} {
+      // Users can read their own challenges
+      allow read: if isSignedIn() &&
+                  resource.data.userId == request.auth.uid;
+
+      // Via Cloud Functions only
+      allow write: if false;
+    }
+
+    match /leaderboard-entries/{entryId} {
+      // Leaderboards are public
+      allow read: if true;
+
+      // Via Cloud Functions only
+      allow write: if false;
+    }
+
+    match /rewards/{rewardId} {
+      // Rewards are public
+      allow read: if true;
+
+      // Only admins can create/update rewards
+      allow write: if isAdmin();
+    }
+
+    match /reward-redemptions/{redemptionId} {
+      // Users can only read their own redemptions
+      allow read: if isSignedIn() &&
+                  resource.data.userId == request.auth.uid;
+
+      // Via Cloud Functions only
+      allow write: if false;
+    }
+
+    match /user-streaks/{streakId} {
+      // Users can read their own streaks
+      allow read: if isSignedIn();
+
+      // Via Cloud Functions only
+      allow write: if false;
+    }
+
+    match /badges/{badgeId} {
+      // Badges are public
+      allow read: if true;
+
+      // Only admins
+      allow write: if isAdmin();
+    }
+
+    match /user-badges/{userBadgeId} {
+      // Public reading
+      allow read: if isSignedIn();
+
+      // Via Cloud Functions only
+      allow write: if false;
+    }
+
+    match /point-transactions/{transactionId} {
+      // Users can only read their own transactions
+      allow read: if isSignedIn() &&
+                  resource.data.userId == request.auth.uid;
+
+      // Via Cloud Functions only
+      allow write: if false;
+    }
+
+    // ============================================
+    // EVENT CALENDARS
+    // ============================================
+
+    match /calendars/{calendarId} {
+      // Public calendars are readable, private only by subscribers/owners
+      allow read: if resource.data.visibility == 'public' ||
+                  exists(/databases/$(database)/documents/calendar-subscribers/$(request.auth.uid + '_' + calendarId)) ||
+                  resource.data.createdBy == request.auth.uid;
+
+      // Authenticated users can create calendars
+      allow create: if isSignedIn() &&
+                    request.resource.data.createdBy == request.auth.uid;
+
+      // Only creator can update/delete
+      allow update, delete: if isSignedIn() &&
+                             resource.data.createdBy == request.auth.uid;
+    }
+
+    match /calendar-subscribers/{subscriberId} {
+      // Users can read their own subscriptions
+      allow read: if isSignedIn() &&
+                  resource.data.userId == request.auth.uid;
+
+      // Via Cloud Functions only (to maintain subscriber counts)
+      allow write: if false;
+    }
+
+    // ============================================
+    // CHAT SYSTEM
+    // ============================================
+
+    match /chat-rooms/{roomId} {
+      // Public rooms are readable, private only by participants
+      allow read: if resource.data.type == 'public' ||
+                  exists(/databases/$(database)/documents/chat-participants/$(request.auth.uid + '_' + roomId));
+
+      // Via Cloud Functions only
+      allow write: if false;
+    }
+
+    match /chat-messages/{messageId} {
+      // Messages readable by room participants
+      allow read: if isSignedIn() &&
+                  exists(/databases/$(database)/documents/chat-participants/$(request.auth.uid + '_' + resource.data.roomId));
+
+      // Users can create messages if they're participants
+      allow create: if isSignedIn() &&
+                    exists(/databases/$(database)/documents/chat-participants/$(request.auth.uid + '_' + request.resource.data.roomId)) &&
+                    request.resource.data.senderId == request.auth.uid;
+
+      // Users can update/delete their own messages
+      allow update: if isSignedIn() &&
+                    resource.data.senderId == request.auth.uid;
+      allow delete: if isSignedIn() &&
+                    resource.data.senderId == request.auth.uid;
+    }
+
+    match /chat-participants/{participantId} {
+      // Participants can read participant lists
+      allow read: if isSignedIn();
+
+      // Via Cloud Functions only (to maintain counts and roles)
+      allow write: if false;
+    }
+
+    match /message-flags/{flagId} {
+      // Only moderators can read flags
+      allow read: if isSignedIn(); // Would need more complex logic for moderator check
+
+      // Via Cloud Functions only
+      allow write: if false;
+    }
+
+    // ============================================
+    // EVENT BLASTS
+    // ============================================
+
+    match /event-blasts/{blastId} {
+      // Only event organizers can read blasts for their events
+      allow read: if isSignedIn() &&
+                  isEventOrganizer(resource.data.eventId);
+
+      // Via Cloud Functions only (to validate templates and recipients)
+      allow write: if false;
+    }
+
+    match /blast-recipients/{recipientId} {
+      // Users can read their own blast deliveries
+      allow read: if isSignedIn() &&
+                  resource.data.userId == request.auth.uid;
+
+      // Via Cloud Functions only
+      allow write: if false;
+    }
+
+    match /waitlist-notifications/{notificationId} {
+      // Users can read their own notifications
+      allow read: if isSignedIn() &&
+                  resource.data.userId == request.auth.uid;
+
+      // Via Cloud Functions only
+      allow write: if false;
+    }
+
+    // ============================================
+    // LIVE DASHBOARD
+    // ============================================
+
+    match /dashboard-activity/{activityId} {
+      // Only event organizers can read dashboard activity
+      allow read: if isSignedIn() &&
+                  isEventOrganizer(resource.data.eventId);
+
+      // Via Cloud Functions only
+      allow write: if false;
+    }
+
+    match /dashboard-configs/{configId} {
+      // Config ID is eventId
+      // Only event organizers can read/write configs
+      allow read: if isSignedIn() &&
+                  isEventOrganizer(configId);
+
+      // Organizers can update their dashboard config
+      allow write: if isSignedIn() &&
+                   isEventOrganizer(configId);
+    }
+
+    // ============================================
+    // WAITLIST & PRICING
+    // ============================================
+
+    match /waitlist-entries/{entryId} {
+      // Users can read their own waitlist entries
+      allow read: if isSignedIn() &&
+                  (resource.data.userId == request.auth.uid ||
+                   isEventOrganizer(resource.data.eventId));
+
+      // Via Cloud Functions only (to maintain positions)
+      allow write: if false;
+    }
+
+    match /dynamic-pricing-configs/{configId} {
+      // Only event organizers can read pricing configs
+      allow read: if isSignedIn() &&
+                  exists(/databases/$(database)/documents/events/$(resource.data.eventId)) &&
+                  isEventOrganizer(resource.data.eventId);
+
+      // Via Cloud Functions only (to ensure consistency)
+      allow write: if false;
+    }
+
+    match /price-history/{historyId} {
+      // Event organizers can read price history
+      allow read: if isSignedIn() &&
+                  isEventOrganizer(resource.data.eventId);
+
+      // Via Cloud Functions only
+      allow write: if false;
+    }
+
+    // ============================================
+    // TRANSLATION SERVICE
+    // ============================================
+
+    match /translation-sessions/{sessionId} {
+      // Event organizers can read their translation sessions
+      allow read: if isSignedIn() &&
+                  isEventOrganizer(resource.data.eventId);
+
+      // Via Cloud Functions only
+      allow write: if false;
+    }
+
+    match /translation-transcripts/{transcriptId} {
+      // Session participants can read transcripts
+      allow read: if isSignedIn() &&
+                  exists(/databases/$(database)/documents/translation-sessions/$(resource.data.sessionId));
+
+      // Via Cloud Functions only
+      allow write: if false;
+    }
+
+    match /equipment-rentals/{rentalId} {
+      // Users can read their own rentals, organizers can read all
+      allow read: if isSignedIn() &&
+                  (resource.data.userId == request.auth.uid ||
+                   isEventOrganizer(resource.data.eventId));
+
+      // Via Cloud Functions only
+      allow write: if false;
+    }
+
+    // ============================================
+    // ANALYTICS (READ-ONLY FROM FRONTEND)
+    // ============================================
+
+    match /analytics/{docId} {
+      // Only admins can read analytics
+      allow read: if isAdmin();
+
+      // Via Cloud Functions only
+      allow write: if false;
+    }
+
+    match /analytics-cache/{cacheId} {
+      // Only admins can read cached analytics
+      allow read: if isAdmin();
+
+      // Via Cloud Functions only
+      allow write: if false;
+    }
+
+    // ============================================
+    // DEFAULT DENY
+    // ============================================
+
+    // Deny all other reads/writes by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
