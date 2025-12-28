@@ -2,6 +2,7 @@
 
 import { ThemeProvider } from 'next-themes';
 import { ReactNode } from 'react';
+import { ToastProvider } from '@/contexts/ToastContext';
 
 interface ProvidersProps {
   children: ReactNode;
@@ -10,7 +11,9 @@ interface ProvidersProps {
 export function Providers({ children }: ProvidersProps) {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      {children}
+      <ToastProvider>
+        {children}
+      </ToastProvider>
     </ThemeProvider>
   );
 }

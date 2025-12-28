@@ -358,10 +358,14 @@ export async function getTicketStats(eventId: string): Promise<TicketStats> {
 
   const stats = {
     total: 0,
+    totalSold: 0,
     valid: 0,
     used: 0,
+    pending: 0,
     cancelled: 0,
     refunded: 0,
+    totalRevenue: 0,
+    checkedIn: 0,
     checkInRate: 0,
   };
 
@@ -369,12 +373,23 @@ export async function getTicketStats(eventId: string): Promise<TicketStats> {
     const ticket = doc.data();
     stats.total++;
 
+    // Calculate total revenue
+    if (ticket.price) {
+      stats.totalRevenue += ticket.price;
+    }
+
     switch (ticket.status) {
       case 'valid':
         stats.valid++;
+        stats.totalSold++;
         break;
       case 'used':
         stats.used++;
+        stats.checkedIn++;
+        stats.totalSold++;
+        break;
+      case 'active':
+        stats.pending++;
         break;
       case 'cancelled':
         stats.cancelled++;

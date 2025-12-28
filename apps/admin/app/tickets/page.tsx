@@ -1,22 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { DataTable, Button, StatusBadge, ConfirmModal, Card, StatCard } from '../../components/ui';
 import type { Column } from '../../components/ui';
-import {
-  getTickets,
-  refundTicket,
-  getTicketStats,
-  type Ticket,
-  type TicketFilters,
-  type TicketStats,
-} from '../../lib/services/tickets';
+import { refundTicket } from '../../lib/services/tickets';
 import { useAuthStore } from '@/stores/authStore';
+import { useOrganizationTickets, type TicketWithDetails } from '@/hooks/useOrganizationTickets';
 import {
   Ticket as TicketIcon,
-  Search,
   RefreshCw,
   Eye,
   RotateCcw,
@@ -26,75 +19,44 @@ import {
 } from 'lucide-react';
 
 export default function TicketsPage() {
-  const { claims, user } = useAuthStore();
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [stats, setStats] = useState<TicketStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { organization, user } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<Ticket['status'] | ''>('');
-  const [eventFilter, setEventFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [refundModalOpen, setRefundModalOpen] = useState(false);
-  const [ticketToRefund, setTicketToRefund] = useState<Ticket | null>(null);
+  const [ticketToRefund, setTicketToRefund] = useState<TicketWithDetails | null>(null);
   const [isRefunding, setIsRefunding] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
-  useEffect(() => {
-    loadData();
-  }, [statusFilter, eventFilter, claims]);
-
-  const loadData = async () => {
-    if (!claims?.organizationId) return;
-
-    setIsLoading(true);
-    try {
-      const filters: TicketFilters = {
-        organizationId: claims.organizationId,
-      };
-
-      if (statusFilter) {
-        filters.status = statusFilter;
-      }
-
-      if (eventFilter) {
-        filters.eventId = eventFilter;
-      }
-
-      const [ticketsResult, statsResult] = await Promise.all([
-        getTickets(filters, { pageSize: 200 }),
-        getTicketStats(claims.organizationId),
-      ]);
-
-      setTickets(ticketsResult.tickets);
-      setStats(statsResult);
-    } catch (error) {
-      console.error('Error loading tickets:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Fetch tickets with real-time updates
+  const { tickets: allTickets, stats, loading: isLoading } = useOrganizationTickets(
+    organization?.id,
+    { status: statusFilter || undefined }
+  );
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
   };
 
-  const filteredTickets = tickets.filter((ticket) => {
-    if (!searchQuery) return true;
+  const filteredTickets = useMemo(() => {
+    if (!searchQuery) return allTickets;
     const search = searchQuery.toLowerCase();
-    return (
+    return allTickets.filter((ticket) =>
       ticket.qrCode.toLowerCase().includes(search) ||
       ticket.eventName.toLowerCase().includes(search) ||
       ticket.buyerName?.toLowerCase().includes(search) ||
       ticket.buyerEmail?.toLowerCase().includes(search)
     );
-  });
+  }, [allTickets, searchQuery]);
 
-  const paginatedTickets = filteredTickets.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
+  const paginatedTickets = useMemo(() => {
+    return filteredTickets.slice(
+      (currentPage - 1) * pageSize,
+      currentPage * pageSize
+    );
+  }, [filteredTickets, currentPage, pageSize]);
 
   const handleRefund = async () => {
     if (!ticketToRefund) return;
@@ -102,7 +64,6 @@ export default function TicketsPage() {
     setIsRefunding(true);
     try {
       await refundTicket(ticketToRefund.eventId, ticketToRefund.id, 'Refund requested by admin', user?.uid || 'admin');
-      await loadData();
       setRefundModalOpen(false);
       setTicketToRefund(null);
     } catch (error) {
@@ -112,14 +73,14 @@ export default function TicketsPage() {
     }
   };
 
-  const columns: Column<Ticket>[] = [
+  const columns: Column<TicketWithDetails>[] = [
     {
       key: 'qrCode',
       header: 'Código',
       render: (ticket) => (
         <div className="flex items-center gap-2">
-          <QrCode className="h-4 w-4 text-gray-400" />
-          <span className="font-mono text-sm">{ticket.qrCode.slice(0, 12)}...</span>
+          <QrCode className="h-4 w-4 text-[hsl(var(--foreground-muted))]" />
+          <span className="font-mono text-sm text-[hsl(var(--foreground))]">{ticket.qrCode.slice(0, 12)}...</span>
         </div>
       ),
     },
@@ -129,8 +90,8 @@ export default function TicketsPage() {
       sortable: true,
       render: (ticket) => (
         <div>
-          <p className="font-medium text-gray-900">{ticket.eventName}</p>
-          <p className="text-sm text-gray-500">{ticket.ticketTypeName}</p>
+          <p className="font-medium text-[hsl(var(--foreground))]">{ticket.eventName}</p>
+          <p className="text-sm text-[hsl(var(--foreground-secondary))]">{ticket.ticketTypeName}</p>
         </div>
       ),
     },
@@ -139,8 +100,8 @@ export default function TicketsPage() {
       header: 'Comprador',
       render: (ticket) => (
         <div>
-          <p className="text-gray-900">{ticket.buyerName || '-'}</p>
-          <p className="text-sm text-gray-500">{ticket.buyerEmail}</p>
+          <p className="text-[hsl(var(--foreground))]">{ticket.buyerName || '-'}</p>
+          <p className="text-sm text-[hsl(var(--foreground-secondary))]">{ticket.buyerEmail}</p>
         </div>
       ),
     },
@@ -148,7 +109,7 @@ export default function TicketsPage() {
       key: 'price',
       header: 'Preço',
       render: (ticket) => (
-        <span className="font-medium">
+        <span className="font-medium text-[hsl(var(--foreground))]">
           {ticket.price.toLocaleString('pt-PT')} CVE
         </span>
       ),
@@ -163,7 +124,7 @@ export default function TicketsPage() {
       header: 'Data',
       sortable: true,
       render: (ticket) => (
-        <span className="text-sm text-gray-500">
+        <span className="text-sm text-[hsl(var(--foreground-secondary))]">
           {ticket.purchasedAt.toLocaleDateString('pt-PT', {
             day: '2-digit',
             month: 'short',
@@ -179,20 +140,20 @@ export default function TicketsPage() {
       render: (ticket) => (
         <div className="flex items-center gap-1">
           <Link href={`/tickets/${ticket.id}`}>
-            <button className="p-2 hover:bg-gray-100 rounded-lg" title="Ver detalhes">
-              <Eye className="h-4 w-4 text-gray-500" />
+            <button className="p-2 hover:bg-[hsl(var(--background-tertiary))] rounded-lg transition-colors" title="Ver detalhes">
+              <Eye className="h-4 w-4 text-[hsl(var(--foreground-muted))]" />
             </button>
           </Link>
-          {ticket.status === 'valid' && (
+          {ticket.status === 'confirmed' && (
             <button
               onClick={() => {
                 setTicketToRefund(ticket);
                 setRefundModalOpen(true);
               }}
-              className="p-2 hover:bg-red-50 rounded-lg"
+              className="p-2 hover:bg-[hsl(var(--error))]/10 rounded-lg transition-colors"
               title="Reembolsar"
             >
-              <RotateCcw className="h-4 w-4 text-red-500" />
+              <RotateCcw className="h-4 w-4 text-[hsl(var(--error))]" />
             </button>
           )}
         </div>
@@ -205,63 +166,73 @@ export default function TicketsPage() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Bilhetes</h1>
-            <p className="text-gray-500">Gerencie todos os bilhetes vendidos</p>
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">Bilhetes</h1>
+              <p className="text-[hsl(var(--foreground-secondary))]">Gerencie todos os bilhetes vendidos</p>
+            </div>
+            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 border border-success/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+              <span className="text-[10px] font-semibold text-success uppercase tracking-wide">Live</span>
+            </span>
           </div>
-          <Button
-            variant="outline"
-            onClick={loadData}
-            leftIcon={<RefreshCw className="h-5 w-5" />}
-          >
-            Atualizar
-          </Button>
         </div>
 
         {/* Stats */}
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              title="Total Vendidos"
-              value={stats.totalSold.toLocaleString('pt-PT')}
-              icon={<TicketIcon size={24} />}
-            />
-            <StatCard
-              title="Receita Total"
-              value={`${stats.totalRevenue.toLocaleString('pt-PT')} CVE`}
-              icon={<DollarSign size={24} />}
-            />
-            <StatCard
-              title="Check-ins"
-              value={stats.checkedIn.toLocaleString('pt-PT')}
-              icon={<CheckCircle size={24} />}
-              change={{
-                value: stats.totalSold > 0 ? (stats.checkedIn / stats.totalSold) * 100 : 0,
-                label: 'taxa',
-              }}
-            />
-            <StatCard
-              title="Pendentes"
-              value={stats.pending.toLocaleString('pt-PT')}
-              icon={<TicketIcon size={24} />}
-            />
-          </div>
-        )}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {isLoading ? (
+            <>
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="stat-card">
+                  <div className="skeleton h-12 w-24 mb-2" />
+                  <div className="skeleton h-4 w-32" />
+                </div>
+              ))}
+            </>
+          ) : (
+            <>
+              <StatCard
+                title="Total Vendidos"
+                value={stats.totalSold.toLocaleString('pt-PT')}
+                icon={<TicketIcon size={24} />}
+              />
+              <StatCard
+                title="Receita Total"
+                value={`${stats.totalRevenue.toLocaleString('pt-PT')} CVE`}
+                icon={<DollarSign size={24} />}
+              />
+              <StatCard
+                title="Check-ins"
+                value={stats.checkedIn.toLocaleString('pt-PT')}
+                icon={<CheckCircle size={24} />}
+                change={{
+                  value: stats.totalSold > 0 ? Math.round((stats.checkedIn / stats.totalSold) * 100) : 0,
+                  label: 'taxa',
+                }}
+              />
+              <StatCard
+                title="Pendentes"
+                value={stats.pending.toLocaleString('pt-PT')}
+                icon={<TicketIcon size={24} />}
+              />
+            </>
+          )}
+        </div>
 
         {/* Filters */}
         <Card padding="sm">
           <div className="flex flex-wrap items-center gap-4">
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as Ticket['status'] | '')}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-2 border border-[hsl(var(--border-color))] rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary bg-[hsl(var(--background-secondary))] text-[hsl(var(--foreground))]"
             >
               <option value="">Todos os estados</option>
-              <option value="valid">Válido</option>
+              <option value="confirmed">Confirmado</option>
               <option value="used">Utilizado</option>
               <option value="cancelled">Cancelado</option>
               <option value="refunded">Reembolsado</option>
-              <option value="transferred">Transferido</option>
+              <option value="pending">Pendente</option>
             </select>
           </div>
         </Card>

@@ -292,10 +292,10 @@ export async function getOrganizationStats(orgId: string): Promise<OrganizationS
   });
 
   return {
-    totalEvents: org.stats?.totalEvents || 0,
-    activeEvents: org.stats?.activeEvents || 0,
-    totalTicketsSold: org.stats?.totalTicketsSold || 0,
-    totalRevenue: org.stats?.totalRevenue || 0,
+    totalEvents: org.eventsCount || 0,
+    activeEvents: 0, // TODO: Calculate from events with status 'published'
+    totalTicketsSold: 0, // TODO: Calculate from tickets collection
+    totalRevenue: org.totalRevenue || 0,
     totalMembers: membersSnapshot.size,
     pendingPayouts: pendingPayoutsAmount,
   };

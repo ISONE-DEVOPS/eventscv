@@ -212,19 +212,19 @@ export default function EventBlastsPage() {
       : 0;
 
   return (
-    <DashboardLayout
-      title="Mensagens Multi-Canal"
-      actions={
-        <button
-          onClick={() => router.push(`/events/${eventId}/blasts/new`)}
-          className="btn btn-primary"
-        >
-          <Plus className="w-4 h-4" />
-          Nova Mensagem
-        </button>
-      }
-    >
+    <DashboardLayout title="Mensagens Multi-Canal">
       <div className="space-y-6">
+        {/* Header with action button */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-white">Mensagens Multi-Canal</h1>
+          <button
+            onClick={() => router.push(`/events/${eventId}/blasts/new`)}
+            className="btn btn-primary"
+          >
+            <Plus className="w-4 h-4" />
+            Nova Mensagem
+          </button>
+        </div>
         {/* Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="stat-card">

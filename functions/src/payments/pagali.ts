@@ -7,6 +7,7 @@
 
 import { onCall, onRequest, HttpsError, CallableRequest } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
+import { sendPurchaseConfirmation, sendPaymentFailure } from '../notifications/email';
 
 const db = admin.firestore();
 
@@ -228,7 +229,7 @@ export const pagaliWebhook = onRequest(
  * Generate tickets and send confirmation
  */
 async function processSuccessfulPayment(orderId: string, orderData: any) {
-  const { eventId, userId, tickets, buyerEmail, buyerName, total } = orderData;
+  const { eventId, userId, tickets, buyerEmail, buyerName, total, eventTitle } = orderData;
 
   // Generate tickets for each ticket type
   const ticketPromises = tickets.map(async (ticketInfo: any) => {
@@ -263,14 +264,37 @@ async function processSuccessfulPayment(orderId: string, orderData: any) {
   await batch.commit();
 
   // Update event ticket count
+  const eventDoc = await db.collection('events').doc(eventId).get();
+  const eventData = eventDoc.data();
+
   await db.collection('events').doc(eventId).update({
     ticketsSold: admin.firestore.FieldValue.increment(allTickets.length),
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
-  // Send confirmation email
-  // TODO: Implement email sending
   console.log(`Tickets generated for order ${orderId}:`, allTickets.length);
+
+  // Send confirmation email
+  try {
+    await sendPurchaseConfirmation({
+      orderId,
+      eventTitle: eventTitle || eventData?.title || 'Evento',
+      eventDate: eventData?.startDate?.toDate() || new Date(),
+      eventLocation: `${eventData?.city || ''}, ${eventData?.island || ''}`.trim() || 'Cabo Verde',
+      buyerName,
+      buyerEmail,
+      tickets: tickets.map((t: any) => ({
+        ticketTypeName: t.ticketTypeName,
+        quantity: t.quantity,
+        price: t.price,
+      })),
+      total,
+      currency: orderData.currency || 'CVE',
+    });
+  } catch (emailError) {
+    console.error(`Error sending confirmation email for order ${orderId}:`, emailError);
+    // Don't fail the payment process if email fails
+  }
 
   // Award points to user (gamification)
   const pointsToAward = Math.floor(total / 100); // 1 point per 100 CVE
@@ -296,8 +320,16 @@ async function processSuccessfulPayment(orderId: string, orderData: any) {
  * Notify user of payment failure
  */
 async function notifyPaymentFailure(orderId: string, orderData: any) {
-  // TODO: Send email/notification about payment failure
   console.log(`Payment failed for order ${orderId}`);
+
+  const { buyerName, buyerEmail, eventTitle } = orderData;
+
+  // Send failure notification email
+  try {
+    await sendPaymentFailure(buyerName, buyerEmail, eventTitle, orderId);
+  } catch (emailError) {
+    console.error(`Error sending failure email for order ${orderId}:`, emailError);
+  }
 }
 
 /**

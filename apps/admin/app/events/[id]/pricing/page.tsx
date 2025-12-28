@@ -231,24 +231,24 @@ export default function EventPricingPage() {
   }
 
   return (
-    <DashboardLayout
-      title="Preços Dinâmicos"
-      actions={
-        <div className="flex items-center gap-2">
-          {selectedTicketType && (
-            <button onClick={handleManualPriceChange} className="btn btn-ghost btn-sm">
-              <Settings className="w-4 h-4" />
-              Ajustar Preço
-            </button>
-          )}
-          <button onClick={loadPricingData} className="btn btn-ghost btn-sm">
-            <RefreshCcw className="w-4 h-4" />
-            Actualizar
-          </button>
-        </div>
-      }
-    >
+    <DashboardLayout title="Preços Dinâmicos">
       <div className="space-y-6">
+        {/* Header with action buttons */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-white">Preços Dinâmicos</h1>
+          <div className="flex items-center gap-2">
+            {selectedTicketType && (
+              <button onClick={handleManualPriceChange} className="btn btn-ghost btn-sm">
+                <Settings className="w-4 h-4" />
+                Ajustar Preço
+              </button>
+            )}
+            <button onClick={loadPricingData} className="btn btn-ghost btn-sm">
+              <RefreshCcw className="w-4 h-4" />
+              Actualizar
+            </button>
+          </div>
+        </div>
         {/* AI Price Recommendation */}
         {recommendation && (
           <div className="card border-2 border-brand-primary bg-brand-primary/5">

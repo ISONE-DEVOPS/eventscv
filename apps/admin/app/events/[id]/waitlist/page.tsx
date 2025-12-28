@@ -256,24 +256,24 @@ export default function EventWaitlistPage() {
   }
 
   return (
-    <DashboardLayout
-      title="Lista de Espera"
-      actions={
-        <div className="flex items-center gap-2">
-          {selectedEntries.size > 0 && (
-            <button onClick={handleNotifySelected} className="btn btn-primary btn-sm">
-              <Send className="w-4 h-4" />
-              Notificar {selectedEntries.size} seleccionados
-            </button>
-          )}
-          <button onClick={loadWaitlist} className="btn btn-ghost btn-sm">
-            <RefreshCcw className="w-4 h-4" />
-            Actualizar
-          </button>
-        </div>
-      }
-    >
+    <DashboardLayout title="Lista de Espera">
       <div className="space-y-6">
+        {/* Header with action buttons */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-white">Lista de Espera</h1>
+          <div className="flex items-center gap-2">
+            {selectedEntries.size > 0 && (
+              <button onClick={handleNotifySelected} className="btn btn-primary btn-sm">
+                <Send className="w-4 h-4" />
+                Notificar {selectedEntries.size} seleccionados
+              </button>
+            )}
+            <button onClick={loadWaitlist} className="btn btn-ghost btn-sm">
+              <RefreshCcw className="w-4 h-4" />
+              Actualizar
+            </button>
+          </div>
+        </div>
         {/* Stats Overview */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -438,13 +438,19 @@ export default function EventWaitlistPage() {
                       <td className="p-4">
                         <div className="flex gap-1">
                           {entry.emailNotifications && (
-                            <Mail className="w-4 h-4 text-zinc-400" title="Email" />
+                            <span title="Email">
+                              <Mail className="w-4 h-4 text-zinc-400" />
+                            </span>
                           )}
                           {entry.smsNotifications && (
-                            <MessageSquare className="w-4 h-4 text-zinc-400" title="SMS" />
+                            <span title="SMS">
+                              <MessageSquare className="w-4 h-4 text-zinc-400" />
+                            </span>
                           )}
                           {entry.pushNotifications && (
-                            <Bell className="w-4 h-4 text-zinc-400" title="Push" />
+                            <span title="Push">
+                              <Bell className="w-4 h-4 text-zinc-400" />
+                            </span>
                           )}
                         </div>
                         {entry.notificationsSent > 0 && (

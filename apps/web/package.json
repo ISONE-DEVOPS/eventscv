@@ -17,6 +17,7 @@
     "firebase": "^10.7.0",
     "lucide-react": "^0.303.0",
     "next": "16.1.0",
+    "qrcode.react": "^4.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-firebase-hooks": "^5.1.1",

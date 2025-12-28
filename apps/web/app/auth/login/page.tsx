@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Ticket,
   Mail,
@@ -12,40 +12,235 @@ import {
   ArrowRight,
   Loader2,
 } from 'lucide-react';
+import {
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
+} from 'firebase/auth';
+import { doc, setDoc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { auth, db } from '../../../lib/firebase';
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
+
+  // Get redirect URL from query params
+  const redirectUrl = searchParams.get('redirect') || '/';
+
+  // Rate limiting state
+  const [loginAttempts, setLoginAttempts] = useState(0);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockTimeRemaining, setBlockTimeRemaining] = useState(0);
+
+  useEffect(() => {
+    // Check if user is blocked
+    const blockExpiry = localStorage.getItem('loginBlockExpiry');
+    if (blockExpiry) {
+      const expiryTime = parseInt(blockExpiry);
+      const now = Date.now();
+      if (now < expiryTime) {
+        setIsBlocked(true);
+        setBlockTimeRemaining(Math.ceil((expiryTime - now) / 1000));
+
+        // Countdown timer
+        const interval = setInterval(() => {
+          const remaining = Math.ceil((expiryTime - Date.now()) / 1000);
+          if (remaining <= 0) {
+            setIsBlocked(false);
+            setBlockTimeRemaining(0);
+            localStorage.removeItem('loginBlockExpiry');
+            localStorage.removeItem('loginAttempts');
+            setLoginAttempts(0);
+            clearInterval(interval);
+          } else {
+            setBlockTimeRemaining(remaining);
+          }
+        }, 1000);
+
+        return () => clearInterval(interval);
+      } else {
+        // Block expired
+        localStorage.removeItem('loginBlockExpiry');
+        localStorage.removeItem('loginAttempts');
+      }
+    }
+
+    // Get login attempts
+    const attempts = localStorage.getItem('loginAttempts');
+    if (attempts) {
+      setLoginAttempts(parseInt(attempts));
+    }
+  }, []);
+
+  const incrementLoginAttempts = () => {
+    const newAttempts = loginAttempts + 1;
+    setLoginAttempts(newAttempts);
+    localStorage.setItem('loginAttempts', newAttempts.toString());
+
+    // Block after 5 failed attempts
+    if (newAttempts >= 5) {
+      const blockExpiry = Date.now() + 5 * 60 * 1000; // 5 minutes
+      localStorage.setItem('loginBlockExpiry', blockExpiry.toString());
+      setIsBlocked(true);
+      setBlockTimeRemaining(300); // 5 minutes in seconds
+      setError('Demasiadas tentativas falhadas. Aguarda 5 minutos.');
+    }
+  };
+
+  const resetLoginAttempts = () => {
+    setLoginAttempts(0);
+    localStorage.removeItem('loginAttempts');
+    localStorage.removeItem('loginBlockExpiry');
+  };
+
+  // Helper function to create or update user document
+  const ensureUserDocument = async (userId: string, email: string, displayName?: string) => {
+    const userRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userRef);
+
+    if (!userDoc.exists()) {
+      // Create new user document
+      await setDoc(userRef, {
+        id: userId,
+        email,
+        name: displayName || 'Utilizador',
+        phone: '',
+        preferredLanguage: 'pt',
+        notificationsEnabled: true,
+        wallet: {
+          balance: 0,
+          bonusBalance: 0,
+          currency: 'CVE',
+        },
+        loyalty: {
+          points: 0,
+          tier: 'bronze',
+        },
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        lastLoginAt: serverTimestamp(),
+      });
+    } else {
+      // Update last login
+      await updateDoc(userRef, {
+        lastLoginAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isBlocked) {
+      setError(`Aguarda ${blockTimeRemaining} segundos antes de tentar novamente.`);
+      return;
+    }
+
     setError('');
     setIsLoading(true);
 
     try {
-      // TODO: Implement Firebase authentication
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      router.push('/');
-    } catch (err) {
-      setError('Email ou password incorretos. Tenta novamente.');
+      // Set persistence based on "Remember Me"
+      await setPersistence(
+        auth,
+        rememberMe ? browserLocalPersistence : browserSessionPersistence
+      );
+
+      // Sign in with Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+
+      // Ensure user document exists
+      await ensureUserDocument(
+        userCredential.user.uid,
+        userCredential.user.email || email,
+        userCredential.user.displayName || undefined
+      );
+
+      // Reset login attempts on success
+      resetLoginAttempts();
+
+      // Redirect to original page or home
+      router.push(redirectUrl);
+    } catch (err: any) {
+      console.error('Login error:', err);
+
+      // Increment failed attempts
+      incrementLoginAttempts();
+
+      // Handle specific Firebase errors
+      if (err.code === 'auth/user-not-found') {
+        setError('Utilizador não encontrado. Verifica o teu email ou cria uma conta.');
+      } else if (err.code === 'auth/wrong-password') {
+        setError('Password incorreta. Tenta novamente.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Formato de email inválido.');
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Demasiadas tentativas. Aguarda alguns minutos.');
+      } else if (err.code === 'auth/user-disabled') {
+        setError('Esta conta foi desativada. Contacta o suporte.');
+      } else if (err.code === 'auth/invalid-credential') {
+        setError('Email ou password incorretos. Tenta novamente.');
+      } else {
+        setError('Erro ao fazer login. Tenta novamente.');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
+    if (isBlocked) {
+      setError(`Aguarda ${blockTimeRemaining} segundos antes de tentar novamente.`);
+      return;
+    }
+
     setError('');
     setIsLoading(true);
+
     try {
-      // TODO: Implement Google authentication
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      router.push('/');
-    } catch (err) {
-      setError('Erro ao autenticar com Google. Tenta novamente.');
+      // Set persistence
+      await setPersistence(
+        auth,
+        rememberMe ? browserLocalPersistence : browserSessionPersistence
+      );
+
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+
+      // Ensure user document exists
+      await ensureUserDocument(
+        result.user.uid,
+        result.user.email || '',
+        result.user.displayName || 'Utilizador'
+      );
+
+      // Reset login attempts on success
+      resetLoginAttempts();
+
+      // Redirect
+      router.push(redirectUrl);
+    } catch (err: any) {
+      console.error('Google auth error:', err);
+
+      if (err.code === 'auth/popup-closed-by-user') {
+        setError('Autenticação cancelada.');
+      } else if (err.code === 'auth/account-exists-with-different-credential') {
+        setError('Já existe uma conta com este email. Usa outro método de login.');
+      } else if (err.code === 'auth/popup-blocked') {
+        setError('Popup bloqueado pelo navegador. Permite popups para este site.');
+      } else {
+        setError('Erro ao autenticar com Google. Tenta novamente.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -172,7 +367,12 @@ export default function LoginPage() {
 
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 rounded border-white/10 bg-background-secondary text-brand-primary focus:ring-brand-primary focus:ring-offset-0" />
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 rounded border-white/10 bg-background-secondary text-brand-primary focus:ring-brand-primary focus:ring-offset-0"
+                  />
                   <span className="text-sm text-zinc-400">Lembrar-me</span>
                 </label>
                 <Link href="/auth/forgot-password" className="text-sm text-brand-primary hover:text-brand-secondary transition-colors">
@@ -245,5 +445,17 @@ export default function LoginPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-brand-primary animate-spin" />
+      </main>
+    }>
+      <LoginPageContent />
+    </Suspense>
   );
 }

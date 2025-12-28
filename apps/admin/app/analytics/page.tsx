@@ -84,15 +84,21 @@ export default function AnalyticsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
-            <p className="text-gray-500">Visualize o desempenho dos seus eventos</p>
+            <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">Analytics</h1>
+            <p className="text-[hsl(var(--foreground-secondary))]">Visualize o desempenho dos seus eventos</p>
           </div>
           <div className="flex items-center gap-3">
-            <Select
+            <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
-              options={dateRangeOptions}
-            />
+              className="px-4 py-2 border border-[hsl(var(--border-color))] rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary bg-[hsl(var(--background-secondary))] text-[hsl(var(--foreground))]"
+            >
+              {dateRangeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
             <Button
               variant="outline"
               onClick={loadAnalytics}
@@ -148,25 +154,25 @@ export default function AnalyticsPage() {
             {/* Revenue Chart (Placeholder) */}
             <Card>
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">Receita ao Longo do Tempo</h3>
-                <BarChart3 size={24} className="text-gray-400" />
+                <h3 className="text-lg font-semibold text-[hsl(var(--foreground))]">Receita ao Longo do Tempo</h3>
+                <BarChart3 size={24} className="text-[hsl(var(--foreground-muted))]" />
               </div>
-              <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
+              <div className="h-64 flex items-center justify-center bg-[hsl(var(--background-secondary))] rounded-lg">
                 <div className="text-center">
-                  <BarChart3 size={48} className="text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-500">Gráfico de receita mensal</p>
+                  <BarChart3 size={48} className="text-[hsl(var(--foreground-muted))]/30 mx-auto mb-2" />
+                  <p className="text-[hsl(var(--foreground-secondary))]">Gráfico de receita mensal</p>
                   <div className="mt-4 grid grid-cols-6 gap-4">
                     {analytics.revenueByMonth.slice(-6).map((month) => (
                       <div key={month.month} className="text-center">
                         <div
-                          className="bg-purple-500 rounded-t mx-auto"
+                          className="bg-gradient-to-t from-brand-primary to-brand-secondary rounded-t mx-auto"
                           style={{
                             height: `${Math.max(20, (month.revenue / 500000) * 150)}px`,
                             width: '24px',
                           }}
                         />
-                        <p className="text-xs text-gray-500 mt-2">{month.month}</p>
-                        <p className="text-xs font-medium text-gray-700">
+                        <p className="text-xs text-[hsl(var(--foreground-secondary))] mt-2">{month.month}</p>
+                        <p className="text-xs font-medium text-[hsl(var(--foreground))]">
                           {(month.revenue / 1000).toFixed(0)}k
                         </p>
                       </div>
@@ -213,7 +219,7 @@ export default function AnalyticsPage() {
 
               {/* Ticket Types Distribution */}
               <Card>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                <h3 className="text-lg font-semibold text-[hsl(var(--foreground))] mb-4">
                   Vendas por Tipo de Bilhete
                 </h3>
                 <div className="space-y-4">
@@ -224,16 +230,16 @@ export default function AnalyticsPage() {
                     return (
                       <div key={ticket.type}>
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium text-gray-700">
+                          <span className="text-sm font-medium text-[hsl(var(--foreground))]">
                             {ticket.type}
                           </span>
-                          <span className="text-sm text-gray-500">
+                          <span className="text-sm text-[hsl(var(--foreground-secondary))]">
                             {ticket.count} ({percentage.toFixed(1)}%)
                           </span>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="w-full bg-[hsl(var(--background-tertiary))] rounded-full h-2">
                           <div
-                            className="bg-purple-600 h-2 rounded-full"
+                            className="bg-gradient-to-r from-brand-primary to-brand-secondary h-2 rounded-full"
                             style={{ width: `${percentage}%` }}
                           />
                         </div>
@@ -248,12 +254,12 @@ export default function AnalyticsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <Card>
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-green-100 rounded-lg">
-                    <Trophy size={24} className="text-green-600" />
+                  <div className="p-3 bg-gradient-to-br from-success/20 to-success/10 rounded-xl">
+                    <Trophy size={24} className="text-success" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Crescimento de Vendas</p>
-                    <p className="text-2xl font-bold text-green-600">
+                    <p className="text-sm text-[hsl(var(--foreground-secondary))]">Crescimento de Vendas</p>
+                    <p className="text-2xl font-bold text-success">
                       +{analytics.trends.ticketSalesGrowth.toFixed(1)}%
                     </p>
                   </div>
@@ -262,12 +268,12 @@ export default function AnalyticsPage() {
 
               <Card>
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-100 rounded-lg">
-                    <DollarSign size={24} className="text-blue-600" />
+                  <div className="p-3 bg-gradient-to-br from-brand-primary/20 to-brand-primary/10 rounded-xl">
+                    <DollarSign size={24} className="text-brand-primary" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Crescimento de Receita</p>
-                    <p className="text-2xl font-bold text-blue-600">
+                    <p className="text-sm text-[hsl(var(--foreground-secondary))]">Crescimento de Receita</p>
+                    <p className="text-2xl font-bold text-brand-primary">
                       +{analytics.trends.revenueGrowth.toFixed(1)}%
                     </p>
                   </div>
@@ -276,12 +282,12 @@ export default function AnalyticsPage() {
 
               <Card>
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-purple-100 rounded-lg">
-                    <Users size={24} className="text-purple-600" />
+                  <div className="p-3 bg-gradient-to-br from-brand-secondary/20 to-brand-secondary/10 rounded-xl">
+                    <Users size={24} className="text-brand-secondary" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Preço Médio do Bilhete</p>
-                    <p className="text-2xl font-bold text-purple-600">
+                    <p className="text-sm text-[hsl(var(--foreground-secondary))]">Preço Médio do Bilhete</p>
+                    <p className="text-2xl font-bold text-brand-secondary">
                       {analytics.overview.averageTicketPrice.toLocaleString('pt-PT')} CVE
                     </p>
                   </div>
@@ -292,33 +298,33 @@ export default function AnalyticsPage() {
             {/* Summary Cards */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumo do Período</h3>
+                <h3 className="text-lg font-semibold text-[hsl(var(--foreground))] mb-4">Resumo do Período</h3>
                 <div className="space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Total de Eventos</span>
-                    <span className="font-medium">{analytics.overview.totalEvents}</span>
+                    <span className="text-[hsl(var(--foreground-secondary))]">Total de Eventos</span>
+                    <span className="font-medium text-[hsl(var(--foreground))]">{analytics.overview.totalEvents}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Bilhetes Vendidos</span>
-                    <span className="font-medium">
+                    <span className="text-[hsl(var(--foreground-secondary))]">Bilhetes Vendidos</span>
+                    <span className="font-medium text-[hsl(var(--foreground))]">
                       {analytics.overview.totalTicketsSold.toLocaleString('pt-PT')}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Receita Total</span>
-                    <span className="font-medium">
+                    <span className="text-[hsl(var(--foreground-secondary))]">Receita Total</span>
+                    <span className="font-medium text-[hsl(var(--foreground))]">
                       {analytics.overview.totalRevenue.toLocaleString('pt-PT')} CVE
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Participantes</span>
-                    <span className="font-medium">
+                    <span className="text-[hsl(var(--foreground-secondary))]">Participantes</span>
+                    <span className="font-medium text-[hsl(var(--foreground))]">
                       {analytics.overview.totalAttendees.toLocaleString('pt-PT')}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Taxa de Check-in</span>
-                    <span className="font-medium">
+                    <span className="text-[hsl(var(--foreground-secondary))]">Taxa de Check-in</span>
+                    <span className="font-medium text-[hsl(var(--foreground))]">
                       {analytics.overview.checkInRate.toFixed(1)}%
                     </span>
                   </div>
@@ -326,38 +332,38 @@ export default function AnalyticsPage() {
               </Card>
 
               <Card>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Metas e Objetivos</h3>
+                <h3 className="text-lg font-semibold text-[hsl(var(--foreground))] mb-4">Metas e Objetivos</h3>
                 <div className="space-y-4">
                   <div>
                     <div className="flex justify-between mb-1">
-                      <span className="text-sm text-gray-500">Meta de Vendas Mensal</span>
-                      <span className="text-sm font-medium">75%</span>
+                      <span className="text-sm text-[hsl(var(--foreground-secondary))]">Meta de Vendas Mensal</span>
+                      <span className="text-sm font-medium text-[hsl(var(--foreground))]">75%</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-green-500 h-2 rounded-full" style={{ width: '75%' }} />
+                    <div className="w-full bg-[hsl(var(--background-tertiary))] rounded-full h-2">
+                      <div className="bg-gradient-to-r from-success to-success/80 h-2 rounded-full" style={{ width: '75%' }} />
                     </div>
                   </div>
                   <div>
                     <div className="flex justify-between mb-1">
-                      <span className="text-sm text-gray-500">Meta de Check-in</span>
-                      <span className="text-sm font-medium">
+                      <span className="text-sm text-[hsl(var(--foreground-secondary))]">Meta de Check-in</span>
+                      <span className="text-sm font-medium text-[hsl(var(--foreground))]">
                         {analytics.overview.checkInRate.toFixed(0)}%
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="w-full bg-[hsl(var(--background-tertiary))] rounded-full h-2">
                       <div
-                        className="bg-blue-500 h-2 rounded-full"
+                        className="bg-gradient-to-r from-brand-primary to-brand-secondary h-2 rounded-full"
                         style={{ width: `${Math.min(100, analytics.overview.checkInRate)}%` }}
                       />
                     </div>
                   </div>
                   <div>
                     <div className="flex justify-between mb-1">
-                      <span className="text-sm text-gray-500">Satisfação do Cliente</span>
-                      <span className="text-sm font-medium">92%</span>
+                      <span className="text-sm text-[hsl(var(--foreground-secondary))]">Satisfação do Cliente</span>
+                      <span className="text-sm font-medium text-[hsl(var(--foreground))]">92%</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-purple-500 h-2 rounded-full" style={{ width: '92%' }} />
+                    <div className="w-full bg-[hsl(var(--background-tertiary))] rounded-full h-2">
+                      <div className="bg-gradient-to-r from-brand-accent to-brand-accent/80 h-2 rounded-full" style={{ width: '92%' }} />
                     </div>
                   </div>
                 </div>

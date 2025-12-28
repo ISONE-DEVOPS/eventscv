@@ -16,55 +16,10 @@ import {
 } from 'lucide-react';
 import { formatCurrency, formatNumber, formatDate } from '@/lib/utils';
 import Link from 'next/link';
-
-// Mock data - will be replaced with real data from Firestore
-const orgStats = {
-  totalEvents: 24,
-  activeEvents: 3,
-  totalTicketsSold: 4567,
-  totalRevenue: 2500000,
-  pendingPayout: 450000,
-  growthEvents: 15.3,
-  growthTickets: 28.7,
-  growthRevenue: 22.1,
-};
-
-const upcomingEvents = [
-  {
-    id: '1',
-    title: 'Summer Beach Party',
-    date: new Date('2024-08-15'),
-    venue: 'Praia de Santa Maria',
-    ticketsSold: 450,
-    totalCapacity: 1000,
-    status: 'published',
-  },
-  {
-    id: '2',
-    title: 'Jazz Night',
-    date: new Date('2024-08-20'),
-    venue: 'Quintal da Musica',
-    ticketsSold: 120,
-    totalCapacity: 200,
-    status: 'published',
-  },
-  {
-    id: '3',
-    title: 'Festival Electronico',
-    date: new Date('2024-09-01'),
-    venue: 'Parque 5 de Julho',
-    ticketsSold: 0,
-    totalCapacity: 5000,
-    status: 'draft',
-  },
-];
-
-const recentSales = [
-  { id: '1', event: 'Summer Beach Party', buyer: 'joao.silva@email.com', tickets: 2, amount: 5000, time: '5 min' },
-  { id: '2', event: 'Jazz Night', buyer: 'maria.santos@email.com', tickets: 4, amount: 8000, time: '12 min' },
-  { id: '3', event: 'Summer Beach Party', buyer: 'pedro.costa@email.com', tickets: 1, amount: 2500, time: '23 min' },
-  { id: '4', event: 'Jazz Night', buyer: 'ana.ferreira@email.com', tickets: 2, amount: 4000, time: '45 min' },
-];
+import { useOrganizationStats } from '@/hooks/useOrganizationStats';
+import { useOrganizationEvents } from '@/hooks/useOrganizationEvents';
+import { useRecentSales } from '@/hooks/useRecentSales';
+import { useToast } from '@/contexts/ToastContext';
 
 function StatCard({
   label,
@@ -112,55 +67,100 @@ export default function OrganizationDashboard() {
   const { claims, organization } = useAuthStore();
   const canCreateEvents = isOrgPromoter(claims);
   const canViewFinance = isOrgAdmin(claims);
+  const { showToast } = useToast();
+
+  // Fetch real data from Firestore
+  const { stats, loading: statsLoading } = useOrganizationStats(organization?.id);
+  const { events, loading: eventsLoading } = useOrganizationEvents(organization?.id, {
+    upcomingOnly: true,
+    limit: 5,
+  });
+  const { sales, loading: salesLoading } = useRecentSales(
+    organization?.id,
+    4,
+    (sale) => {
+      // Show toast notification for new sale
+      showToast(
+        'success',
+        'Nova Venda!',
+        `${sale.ticketCount} ${sale.ticketCount === 1 ? 'bilhete' : 'bilhetes'} - ${formatCurrency(sale.amount)}`
+      );
+    }
+  );
+
+  const isLoading = statsLoading || eventsLoading || salesLoading;
 
   return (
     <DashboardLayout title="Dashboard">
       <div className="space-y-6">
         {/* Welcome Banner */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-brand-primary/20 via-brand-secondary/20 to-brand-accent/20 p-6">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-primary via-brand-secondary to-brand-accent p-8 shadow-2xl shadow-brand-primary/20">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItMnptMCAwdi0yaDJ2MnptMCAwaDJ2LTJoLTJ6bTAtMmgtMnYyaDJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30" />
           <div className="relative z-10">
-            <h1 className="text-2xl font-display font-bold text-white">
-              Ola, {organization?.name || 'Organizacao'}!
-            </h1>
-            <p className="text-zinc-300 mt-1">
-              Aqui esta um resumo da sua atividade recente
-            </p>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-xl flex items-center justify-center shadow-lg">
+                <TrendingUp className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-display font-bold text-white">
+                  Olá, {organization?.name || 'Organização'}!
+                </h1>
+                <p className="text-white/90 mt-0.5 font-medium">
+                  Aqui está um resumo da sua atividade recente
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="absolute -right-10 -top-10 w-40 h-40 bg-brand-primary/30 rounded-full blur-3xl" />
+          <div className="absolute -right-16 -top-16 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+          <div className="absolute -left-10 -bottom-10 w-48 h-48 bg-brand-accent/20 rounded-full blur-2xl" />
         </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            label="Eventos Ativos"
-            value={orgStats.activeEvents}
-            icon={Calendar}
-            trend="up"
-            trendValue={orgStats.growthEvents}
-          />
-          <StatCard
-            label="Bilhetes Vendidos"
-            value={orgStats.totalTicketsSold}
-            icon={Ticket}
-            trend="up"
-            trendValue={orgStats.growthTickets}
-          />
-          {canViewFinance && (
+          {isLoading ? (
+            // Loading skeletons
+            <>
+              {[...Array(canViewFinance ? 4 : 2)].map((_, i) => (
+                <div key={i} className="stat-card">
+                  <div className="skeleton h-12 w-24 mb-2" />
+                  <div className="skeleton h-4 w-32" />
+                </div>
+              ))}
+            </>
+          ) : (
             <>
               <StatCard
-                label="Receita Total"
-                value={orgStats.totalRevenue}
-                icon={CreditCard}
-                trend="up"
-                trendValue={orgStats.growthRevenue}
-                format="currency"
+                label="Eventos Ativos"
+                value={stats.activeEvents}
+                icon={Calendar}
+                trend={stats.growthEvents >= 0 ? 'up' : 'down'}
+                trendValue={Math.abs(stats.growthEvents)}
               />
               <StatCard
-                label="Payout Pendente"
-                value={orgStats.pendingPayout}
-                icon={TrendingUp}
-                format="currency"
+                label="Bilhetes Vendidos"
+                value={stats.totalTicketsSold}
+                icon={Ticket}
+                trend={stats.growthTickets >= 0 ? 'up' : 'down'}
+                trendValue={Math.abs(stats.growthTickets)}
               />
+              {canViewFinance && (
+                <>
+                  <StatCard
+                    label="Receita Total"
+                    value={stats.totalRevenue}
+                    icon={CreditCard}
+                    trend={stats.growthRevenue >= 0 ? 'up' : 'down'}
+                    trendValue={Math.abs(stats.growthRevenue)}
+                    format="currency"
+                  />
+                  <StatCard
+                    label="Payout Pendente"
+                    value={stats.pendingPayout}
+                    icon={TrendingUp}
+                    format="currency"
+                  />
+                </>
+              )}
             </>
           )}
         </div>
@@ -170,43 +170,55 @@ export default function OrganizationDashboard() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Link
               href="/events/new"
-              className="flex items-center gap-3 p-4 rounded-xl bg-brand-primary/10 border border-brand-primary/20 hover:bg-brand-primary/20 transition-colors"
+              className="group relative overflow-hidden flex items-center gap-3 p-5 rounded-2xl bg-gradient-to-br from-brand-primary/15 to-brand-primary/5 border-2 border-brand-primary/30 hover:border-brand-primary/50 hover:shadow-xl hover:shadow-brand-primary/10 hover:-translate-y-1 transition-all duration-300"
             >
-              <Plus size={24} className="text-brand-primary" />
-              <div>
-                <p className="font-medium text-white">Criar Evento</p>
-                <p className="text-sm text-zinc-400">Novo evento</p>
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-primary to-brand-secondary flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <Plus size={20} className="text-white" />
               </div>
+              <div>
+                <p className="font-bold text-[hsl(var(--foreground))]">Criar Evento</p>
+                <p className="text-sm text-[hsl(var(--foreground-muted))]">Novo evento</p>
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-brand-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </Link>
             <Link
               href="/tickets"
-              className="flex items-center gap-3 p-4 rounded-xl bg-background-secondary border border-white/5 hover:border-white/10 transition-colors"
+              className="group relative overflow-hidden flex items-center gap-3 p-5 rounded-2xl bg-gradient-to-br from-background-secondary to-background-tertiary/50 border-2 border-[hsl(var(--primary))/0.15] hover:border-brand-secondary/40 hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
             >
-              <Ticket size={24} className="text-brand-secondary" />
-              <div>
-                <p className="font-medium text-white">Gerir Bilhetes</p>
-                <p className="text-sm text-zinc-400">Ver vendas</p>
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-secondary/20 to-brand-secondary/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <Ticket size={20} className="text-brand-secondary" />
               </div>
+              <div>
+                <p className="font-bold text-[hsl(var(--foreground))]">Gerir Bilhetes</p>
+                <p className="text-sm text-[hsl(var(--foreground-muted))]">Ver vendas</p>
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-brand-secondary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </Link>
             <Link
               href="/checkin"
-              className="flex items-center gap-3 p-4 rounded-xl bg-background-secondary border border-white/5 hover:border-white/10 transition-colors"
+              className="group relative overflow-hidden flex items-center gap-3 p-5 rounded-2xl bg-gradient-to-br from-background-secondary to-background-tertiary/50 border-2 border-[hsl(var(--primary))/0.15] hover:border-brand-accent/40 hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
             >
-              <QrCode size={24} className="text-brand-accent" />
-              <div>
-                <p className="font-medium text-white">Check-in</p>
-                <p className="text-sm text-zinc-400">Scanner QR</p>
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-accent/20 to-brand-accent/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <QrCode size={20} className="text-brand-accent" />
               </div>
+              <div>
+                <p className="font-bold text-[hsl(var(--foreground))]">Check-in</p>
+                <p className="text-sm text-[hsl(var(--foreground-muted))]">Scanner QR</p>
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-brand-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </Link>
             <Link
               href="/analytics"
-              className="flex items-center gap-3 p-4 rounded-xl bg-background-secondary border border-white/5 hover:border-white/10 transition-colors"
+              className="group relative overflow-hidden flex items-center gap-3 p-5 rounded-2xl bg-gradient-to-br from-background-secondary to-background-tertiary/50 border-2 border-[hsl(var(--primary))/0.15] hover:border-success/40 hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
             >
-              <TrendingUp size={24} className="text-success" />
-              <div>
-                <p className="font-medium text-white">Analytics</p>
-                <p className="text-sm text-zinc-400">Ver relatorios</p>
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-success/20 to-success/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <TrendingUp size={20} className="text-success" />
               </div>
+              <div>
+                <p className="font-bold text-[hsl(var(--foreground))]">Analytics</p>
+                <p className="text-sm text-[hsl(var(--foreground-muted))]">Ver relatórios</p>
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-success/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </Link>
           </div>
         )}
@@ -216,80 +228,143 @@ export default function OrganizationDashboard() {
           {/* Upcoming Events */}
           <div className="card">
             <div className="card-header">
-              <h2 className="card-title">Proximos Eventos</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="card-title">Proximos Eventos</h2>
+                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 border border-success/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                  <span className="text-[10px] font-semibold text-success uppercase tracking-wide">Live</span>
+                </span>
+              </div>
               <Link href="/events" className="btn btn-ghost btn-sm">
                 Ver todos
               </Link>
             </div>
-            <div className="divide-y divide-white/5">
-              {upcomingEvents.map((event) => (
-                <div
-                  key={event.id}
-                  className="p-4 hover:bg-white/[0.02] transition-colors cursor-pointer"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium text-white truncate">
-                          {event.title}
-                        </h3>
-                        {event.status === 'draft' && (
-                          <span className="badge badge-warning">Rascunho</span>
-                        )}
+            <div className="divide-y divide-[hsl(var(--border-color))]">
+              {isLoading ? (
+                // Loading skeletons
+                <>
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="p-4">
+                      <div className="skeleton h-5 w-48 mb-2" />
+                      <div className="skeleton h-4 w-64 mb-3" />
+                      <div className="skeleton h-1.5 w-full" />
+                    </div>
+                  ))}
+                </>
+              ) : events.length > 0 ? (
+                events.map((event) => (
+                  <div
+                    key={event.id}
+                    className="p-4 hover:bg-gradient-to-r hover:from-brand-primary/5 hover:to-transparent transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium text-[hsl(var(--foreground))] truncate">
+                            {event.title}
+                          </h3>
+                          {event.status === 'draft' && (
+                            <span className="badge badge-warning">Rascunho</span>
+                          )}
+                        </div>
+                        <p className="text-sm text-[hsl(var(--foreground-secondary))] mt-1">
+                          {formatDate(event.startDate)} - {event.venue}
+                        </p>
                       </div>
-                      <p className="text-sm text-zinc-400 mt-1">
-                        {formatDate(event.date)} - {event.venue}
-                      </p>
+                      <div className="text-right ml-4">
+                        <p className="text-sm font-medium text-[hsl(var(--foreground))]">
+                          {event.ticketsSold}/{event.totalCapacity}
+                        </p>
+                        <p className="text-xs text-[hsl(var(--foreground-muted))]">bilhetes</p>
+                      </div>
                     </div>
-                    <div className="text-right ml-4">
-                      <p className="text-sm font-medium text-white">
-                        {event.ticketsSold}/{event.totalCapacity}
-                      </p>
-                      <p className="text-xs text-zinc-500">bilhetes</p>
+                    {/* Progress bar */}
+                    <div className="mt-3 h-1.5 bg-background rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-brand-primary to-brand-secondary rounded-full"
+                        style={{
+                          width: `${event.totalCapacity > 0 ? (event.ticketsSold / event.totalCapacity) * 100 : 0}%`,
+                        }}
+                      />
                     </div>
                   </div>
-                  {/* Progress bar */}
-                  <div className="mt-3 h-1.5 bg-background rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-brand-primary to-brand-secondary rounded-full"
-                      style={{
-                        width: `${(event.ticketsSold / event.totalCapacity) * 100}%`,
-                      }}
-                    />
-                  </div>
+                ))
+              ) : (
+                <div className="empty-state py-12">
+                  <Calendar size={48} className="text-[hsl(var(--foreground-muted))] mb-3 mx-auto" />
+                  <p className="text-sm text-[hsl(var(--foreground-secondary))]">Nenhum evento próximo</p>
+                  {canCreateEvents && (
+                    <Link href="/events/new" className="btn btn-primary mt-4">
+                      <Plus size={16} />
+                      Criar Primeiro Evento
+                    </Link>
+                  )}
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
           {/* Recent Sales */}
           <div className="card">
             <div className="card-header">
-              <h2 className="card-title">Vendas Recentes</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="card-title">Vendas Recentes</h2>
+                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 border border-success/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                  <span className="text-[10px] font-semibold text-success uppercase tracking-wide">Live</span>
+                </span>
+              </div>
               <Link href="/tickets" className="btn btn-ghost btn-sm">
                 Ver todas
               </Link>
             </div>
-            <div className="divide-y divide-white/5">
-              {recentSales.map((sale) => (
-                <div
-                  key={sale.id}
-                  className="p-4 flex items-center justify-between hover:bg-white/[0.02] transition-colors"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-white truncate">{sale.event}</p>
-                    <p className="text-sm text-zinc-400 truncate">{sale.buyer}</p>
+            <div className="divide-y divide-[hsl(var(--border-color))]">
+              {isLoading ? (
+                // Loading skeletons
+                <>
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="p-4 flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="skeleton h-5 w-40 mb-2" />
+                        <div className="skeleton h-4 w-48" />
+                      </div>
+                      <div className="text-right ml-4">
+                        <div className="skeleton h-5 w-24 mb-2 ml-auto" />
+                        <div className="skeleton h-4 w-32 ml-auto" />
+                      </div>
+                    </div>
+                  ))}
+                </>
+              ) : sales.length > 0 ? (
+                sales.map((sale) => (
+                  <div
+                    key={sale.id}
+                    className="p-4 flex items-center justify-between hover:bg-gradient-to-r hover:from-brand-primary/5 hover:to-transparent transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-[hsl(var(--foreground))] truncate">
+                        {sale.eventTitle}
+                      </p>
+                      <p className="text-sm text-[hsl(var(--foreground-secondary))] truncate">
+                        {sale.buyerEmail}
+                      </p>
+                    </div>
+                    <div className="text-right ml-4">
+                      <p className="font-medium text-[hsl(var(--foreground))]">
+                        {formatCurrency(sale.amount)}
+                      </p>
+                      <p className="text-xs text-[hsl(var(--foreground-muted))]">
+                        {sale.ticketCount} {sale.ticketCount === 1 ? 'bilhete' : 'bilhetes'} - {sale.timeAgo}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right ml-4">
-                    <p className="font-medium text-white">
-                      {formatCurrency(sale.amount)}
-                    </p>
-                    <p className="text-xs text-zinc-500">
-                      {sale.tickets} {sale.tickets === 1 ? 'bilhete' : 'bilhetes'} - {sale.time}
-                    </p>
-                  </div>
+                ))
+              ) : (
+                <div className="empty-state py-12">
+                  <Ticket size={48} className="text-[hsl(var(--foreground-muted))] mb-3 mx-auto" />
+                  <p className="text-sm text-[hsl(var(--foreground-secondary))]">Nenhuma venda recente</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
@@ -309,20 +384,20 @@ export default function OrganizationDashboard() {
                   {[1, 2, 3, 4].map((i) => (
                     <div
                       key={i}
-                      className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary border-2 border-background-secondary flex items-center justify-center"
+                      className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary border-2 border-[hsl(var(--background-secondary))] flex items-center justify-center"
                     >
                       <span className="text-white text-sm font-medium">
                         {String.fromCharCode(64 + i)}
                       </span>
                     </div>
                   ))}
-                  <div className="w-10 h-10 rounded-full bg-background-tertiary border-2 border-background-secondary flex items-center justify-center">
-                    <span className="text-zinc-400 text-sm">+3</span>
+                  <div className="w-10 h-10 rounded-full bg-[hsl(var(--background-tertiary))] border-2 border-[hsl(var(--background-secondary))] flex items-center justify-center">
+                    <span className="text-[hsl(var(--foreground-secondary))] text-sm">+3</span>
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm text-zinc-400">7 membros na equipa</p>
-                  <p className="text-xs text-zinc-500">2 admins, 3 promotores, 2 staff</p>
+                  <p className="text-sm text-[hsl(var(--foreground-secondary))]">7 membros na equipa</p>
+                  <p className="text-xs text-[hsl(var(--foreground-muted))]">2 admins, 3 promotores, 2 staff</p>
                 </div>
               </div>
             </div>

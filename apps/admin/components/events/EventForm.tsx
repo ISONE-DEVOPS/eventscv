@@ -1,706 +1,321 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import {
-  Button,
-  Input,
-  Textarea,
-  Select,
-  Switch,
-  FormSection,
-  DateTimePicker,
-  CurrencyInput,
-} from '../ui';
-import { Card } from '../ui/Card';
-import { type EventFormData } from '../../lib/services/events';
-import {
-  ArrowLeft,
-  Plus,
-  Trash2,
-  Image,
-} from 'lucide-react';
-
-interface TicketTypeForm {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  quantity: number;
-  maxPerOrder: number;
-  salesStart: string;
-  salesEnd: string;
-}
+import { Image, Trash2, Plus } from 'lucide-react';
+import { EventFormData } from '@/lib/services/events';
 
 interface EventFormProps {
   initialData?: Partial<EventFormData>;
-  onSubmit: (data: EventFormData) => Promise<void>;
+  onSubmit: (data: EventFormData) => void;
   isLoading?: boolean;
 }
 
-export default function EventForm({
-  initialData,
-  onSubmit,
-  isLoading = false,
-}: EventFormProps) {
-  const router = useRouter();
+const CABO_VERDE_ISLANDS = [
+  'Santiago',
+  'São Vicente',
+  'Santo Antão',
+  'Fogo',
+  'Sal',
+  'Boa Vista',
+  'Maio',
+  'Brava',
+  'São Nicolau',
+];
 
-  // Basic info
-  const [name, setName] = useState(initialData?.title || '');
-  const [description, setDescription] = useState(initialData?.description || '');
-  const [category, setCategory] = useState(initialData?.category || '');
-  const [tags, setTags] = useState<string[]>(initialData?.tags || []);
-  const [tagInput, setTagInput] = useState('');
+const EVENT_CATEGORIES = [
+  'Música',
+  'Arte & Cultura',
+  'Desporto',
+  'Tecnologia',
+  'Educação',
+  'Negócios',
+  'Entretenimento',
+  'Gastronomia',
+  'Outro',
+];
 
-  // Date & Time
-  const [startDate, setStartDate] = useState(
-    initialData?.startDate?.toISOString().slice(0, 16) || ''
-  );
-  const [endDate, setEndDate] = useState(
-    initialData?.endDate?.toISOString().slice(0, 16) || ''
-  );
-
-  // Venue
-  const [venueName, setVenueName] = useState(initialData?.location?.name || '');
-  const [venueAddress, setVenueAddress] = useState(initialData?.location?.address || '');
-  const [venueCity, setVenueCity] = useState(initialData?.location?.city || '');
-
-  // Images
-  const [coverImage, setCoverImage] = useState(initialData?.coverImage || '');
-
-  // Settings
-  const [isPublic, setIsPublic] = useState(initialData?.isPublic ?? true);
-  const [allowTransfers, setAllowTransfers] = useState(
-    initialData?.settings?.allowTransfers ?? true
-  );
-  const [allowRefunds, setAllowRefunds] = useState(
-    initialData?.settings?.allowRefunds ?? false
-  );
-  const [requireId, setRequireId] = useState(initialData?.settings?.requireId ?? false);
-  const [ageRestriction, setAgeRestriction] = useState(
-    initialData?.settings?.ageRestriction || 0
-  );
-
-  // Ticket Types
-  const [ticketTypes, setTicketTypes] = useState<TicketTypeForm[]>([
-    {
-      id: '1',
+export default function EventForm({ initialData, onSubmit, isLoading }: EventFormProps) {
+  const [formData, setFormData] = useState<Partial<EventFormData>>({
+    title: '',
+    description: '',
+    shortDescription: '',
+    category: 'Música',
+    startDate: new Date(),
+    endDate: new Date(),
+    location: {
       name: '',
-      description: '',
-      price: 0,
-      quantity: 100,
-      maxPerOrder: 10,
-      salesStart: '',
-      salesEnd: '',
+      address: '',
+      city: '',
+      island: 'Santiago',
     },
-  ]);
+    capacity: 1000,
+    status: 'draft',
+    isPublic: true,
+    ...initialData,
+  });
 
-  // Custom Registration Fields
-  const [customFields, setCustomFields] = useState<any[]>(
-    initialData?.registration?.customFields || []
-  );
-
-  // Errors
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const categories = [
-    { value: 'music', label: 'Música' },
-    { value: 'party', label: 'Festa' },
-    { value: 'festival', label: 'Festival' },
-    { value: 'sports', label: 'Desporto' },
-    { value: 'theater', label: 'Teatro' },
-    { value: 'conference', label: 'Conferência' },
-    { value: 'workshop', label: 'Workshop' },
-    { value: 'other', label: 'Outro' },
-  ];
-
-  const cities = [
-    { value: 'praia', label: 'Praia' },
-    { value: 'mindelo', label: 'Mindelo' },
-    { value: 'sal', label: 'Santa Maria (Sal)' },
-    { value: 'boa-vista', label: 'Boa Vista' },
-    { value: 'sao-filipe', label: 'São Filipe' },
-    { value: 'assomada', label: 'Assomada' },
-    { value: 'tarrafal', label: 'Tarrafal' },
-    { value: 'other', label: 'Outra' },
-  ];
-
-  const addTag = () => {
-    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
-      setTags([...tags, tagInput.trim()]);
-      setTagInput('');
-    }
-  };
-
-  const removeTag = (tag: string) => {
-    setTags(tags.filter((t) => t !== tag));
-  };
-
-  const addTicketType = () => {
-    setTicketTypes([
-      ...ticketTypes,
-      {
-        id: String(Date.now()),
-        name: '',
-        description: '',
-        price: 0,
-        quantity: 100,
-        maxPerOrder: 10,
-        salesStart: '',
-        salesEnd: '',
-      },
-    ]);
-  };
-
-  const removeTicketType = (id: string) => {
-    if (ticketTypes.length > 1) {
-      setTicketTypes(ticketTypes.filter((t) => t.id !== id));
-    }
-  };
-
-  const updateTicketType = (id: string, field: keyof TicketTypeForm, value: string | number) => {
-    setTicketTypes(
-      ticketTypes.map((t) =>
-        t.id === id ? { ...t, [field]: value } : t
-      )
-    );
-  };
-
-  const validate = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (!name.trim()) newErrors.name = 'Nome é obrigatório';
-    if (!description.trim()) newErrors.description = 'Descrição é obrigatória';
-    if (!category) newErrors.category = 'Categoria é obrigatória';
-    if (!startDate) newErrors.startDate = 'Data de início é obrigatória';
-    if (!endDate) newErrors.endDate = 'Data de fim é obrigatória';
-    if (!venueName.trim()) newErrors.venueName = 'Nome do local é obrigatório';
-    if (!venueCity) newErrors.venueCity = 'Cidade é obrigatória';
-
-    // Validate dates
-    if (startDate && endDate && new Date(startDate) >= new Date(endDate)) {
-      newErrors.endDate = 'Data de fim deve ser após a data de início';
-    }
-
-    // Validate ticket types
-    ticketTypes.forEach((ticket, index) => {
-      if (!ticket.name.trim()) {
-        newErrors[`ticket_${index}_name`] = 'Nome do bilhete é obrigatório';
-      }
-      if (ticket.price < 0) {
-        newErrors[`ticket_${index}_price`] = 'Preço deve ser maior ou igual a 0';
-      }
-      if (ticket.quantity <= 0) {
-        newErrors[`ticket_${index}_quantity`] = 'Quantidade deve ser maior que 0';
-      }
-    });
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    onSubmit(formData as EventFormData);
+  };
 
-    if (!validate()) return;
+  const handleChange = (field: string, value: any) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
 
-    const formData: EventFormData = {
-      name,
-      description,
-      category,
-      tags,
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
-      venue: {
-        name: venueName,
-        address: venueAddress,
-        city: venueCity,
+  const handleLocationChange = (field: string, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      location: {
+        ...prev.location,
+        name: prev.location?.name || '',
+        address: prev.location?.address || '',
+        city: prev.location?.city || '',
+        island: prev.location?.island || 'Santiago',
+        [field]: value,
       },
-      coverImage,
-      isPublic,
-      settings: {
-        allowTransfers,
-        allowRefunds,
-        refundDeadlineHours: 24,
-        requireId,
-        ageRestriction,
-        maxTicketsPerOrder: 10,
-      },
-      registration: {
-        enabled: true,
-        guestRegistrationEnabled: true,
-        customFields: customFields,
-      },
-      ticketTypes: ticketTypes.map((t) => ({
-        name: t.name,
-        description: t.description,
-        price: t.price,
-        quantity: t.quantity,
-        maxPerOrder: t.maxPerOrder,
-        salesStart: t.salesStart ? new Date(t.salesStart) : undefined,
-        salesEnd: t.salesEnd ? new Date(t.salesEnd) : undefined,
-      })),
-    };
-
-    await onSubmit(formData);
+    }));
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-8">
       {/* Basic Information */}
-      <Card>
-        <FormSection
-          title="Informações Básicas"
-          description="Detalhes principais do seu evento"
-        >
-          <Input
-            label="Nome do Evento"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Ex: Festival de Música de Mindelo"
-            error={errors.name}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-white">Informação Básica</h2>
+
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-2">
+            Título do Evento *
+          </label>
+          <input
+            type="text"
+            value={formData.title}
+            onChange={(e) => handleChange('title', e.target.value)}
+            className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-primary-500"
             required
           />
+        </div>
 
-          <Textarea
-            label="Descrição"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Descreva o seu evento..."
-            error={errors.description}
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-2">
+            Descrição Curta
+          </label>
+          <input
+            type="text"
+            value={formData.shortDescription || ''}
+            onChange={(e) => handleChange('shortDescription', e.target.value)}
+            className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-primary-500"
+            maxLength={200}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-2">
+            Descrição *
+          </label>
+          <textarea
+            value={formData.description}
+            onChange={(e) => handleChange('description', e.target.value)}
+            rows={6}
+            className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-primary-500"
             required
           />
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Select
-              label="Categoria"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              options={categories}
-              placeholder="Selecione uma categoria"
-              error={errors.category}
-              required
-            />
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tags
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
-                  placeholder="Adicionar tag..."
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
-                />
-                <Button type="button" variant="secondary" onClick={addTag}>
-                  Adicionar
-                </Button>
-              </div>
-              {tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-800 text-sm rounded-full"
-                    >
-                      {tag}
-                      <button
-                        type="button"
-                        onClick={() => removeTag(tag)}
-                        className="ml-1 hover:text-purple-600"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </FormSection>
-      </Card>
-
-      {/* Date & Time */}
-      <Card>
-        <FormSection
-          title="Data e Hora"
-          description="Quando o seu evento irá acontecer"
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <DateTimePicker
-              label="Data e Hora de Início"
-              value={startDate}
-              onChange={setStartDate}
-              error={errors.startDate}
-              required
-            />
-
-            <DateTimePicker
-              label="Data e Hora de Fim"
-              value={endDate}
-              onChange={setEndDate}
-              min={startDate}
-              error={errors.endDate}
-              required
-            />
-          </div>
-        </FormSection>
-      </Card>
-
-      {/* Venue */}
-      <Card>
-        <FormSection
-          title="Local"
-          description="Onde o evento irá acontecer"
-        >
-          <Input
-            label="Nome do Local"
-            value={venueName}
-            onChange={(e) => setVenueName(e.target.value)}
-            placeholder="Ex: Praça Nova, Centro Cultural"
-            error={errors.venueName}
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-2">
+            Categoria *
+          </label>
+          <select
+            value={formData.category}
+            onChange={(e) => handleChange('category', e.target.value)}
+            className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-primary-500"
             required
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Endereço"
-              value={venueAddress}
-              onChange={(e) => setVenueAddress(e.target.value)}
-              placeholder="Rua, número..."
-            />
-
-            <Select
-              label="Cidade"
-              value={venueCity}
-              onChange={(e) => setVenueCity(e.target.value)}
-              options={cities}
-              placeholder="Selecione a cidade"
-              error={errors.venueCity}
-              required
-            />
-          </div>
-        </FormSection>
-      </Card>
-
-      {/* Cover Image */}
-      <Card>
-        <FormSection
-          title="Imagem de Capa"
-          description="Imagem principal do evento"
-        >
-          <Input
-            label="URL da Imagem"
-            value={coverImage}
-            onChange={(e) => setCoverImage(e.target.value)}
-            placeholder="https://..."
-            leftIcon={<PhotoIcon className="h-5 w-5" />}
-          />
-          {coverImage && (
-            <div className="mt-4">
-              <img
-                src={coverImage}
-                alt="Preview"
-                className="max-h-48 rounded-lg object-cover"
-              />
-            </div>
-          )}
-        </FormSection>
-      </Card>
-
-      {/* Ticket Types */}
-      <Card>
-        <FormSection
-          title="Tipos de Bilhetes"
-          description="Configure os bilhetes disponíveis"
-        >
-          <div className="space-y-6">
-            {ticketTypes.map((ticket, index) => (
-              <div
-                key={ticket.id}
-                className="p-4 border border-gray-200 rounded-lg space-y-4"
-              >
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium text-gray-900">
-                    Bilhete {index + 1}
-                  </h4>
-                  {ticketTypes.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeTicketType(ticket.id)}
-                      className="p-1 text-red-500 hover:bg-red-50 rounded"
-                    >
-                      <TrashIcon className="h-5 w-5" />
-                    </button>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label="Nome"
-                    value={ticket.name}
-                    onChange={(e) =>
-                      updateTicketType(ticket.id, 'name', e.target.value)
-                    }
-                    placeholder="Ex: VIP, Regular, Early Bird"
-                    error={errors[`ticket_${index}_name`]}
-                    required
-                  />
-
-                  <CurrencyInput
-                    label="Preço"
-                    value={ticket.price}
-                    onChange={(value) =>
-                      updateTicketType(ticket.id, 'price', value)
-                    }
-                    error={errors[`ticket_${index}_price`]}
-                    required
-                  />
-                </div>
-
-                <Input
-                  label="Descrição"
-                  value={ticket.description}
-                  onChange={(e) =>
-                    updateTicketType(ticket.id, 'description', e.target.value)
-                  }
-                  placeholder="Benefícios incluídos..."
-                />
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label="Quantidade"
-                    type="number"
-                    value={ticket.quantity}
-                    onChange={(e) =>
-                      updateTicketType(ticket.id, 'quantity', Number(e.target.value))
-                    }
-                    min={1}
-                    error={errors[`ticket_${index}_quantity`]}
-                    required
-                  />
-
-                  <Input
-                    label="Máx. por encomenda"
-                    type="number"
-                    value={ticket.maxPerOrder}
-                    onChange={(e) =>
-                      updateTicketType(ticket.id, 'maxPerOrder', Number(e.target.value))
-                    }
-                    min={1}
-                    max={20}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <DateTimePicker
-                    label="Início das Vendas"
-                    value={ticket.salesStart}
-                    onChange={(value) =>
-                      updateTicketType(ticket.id, 'salesStart', value)
-                    }
-                  />
-
-                  <DateTimePicker
-                    label="Fim das Vendas"
-                    value={ticket.salesEnd}
-                    onChange={(value) =>
-                      updateTicketType(ticket.id, 'salesEnd', value)
-                    }
-                  />
-                </div>
-              </div>
+          >
+            {EVENT_CATEGORIES.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
             ))}
+          </select>
+        </div>
 
-            <Button
-              type="button"
-              variant="outline"
-              onClick={addTicketType}
-              leftIcon={<PlusIcon className="h-5 w-5" />}
-            >
-              Adicionar Tipo de Bilhete
-            </Button>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-zinc-300 mb-2">
+              Data de Início *
+            </label>
+            <input
+              type="datetime-local"
+              value={formData.startDate ? new Date(formData.startDate).toISOString().slice(0, 16) : ''}
+              onChange={(e) => handleChange('startDate', new Date(e.target.value))}
+              className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-primary-500"
+              required
+            />
           </div>
-        </FormSection>
-      </Card>
 
-      {/* Custom Registration Fields */}
-      <Card>
-        <FormSection
-          title="Campos de Registo Personalizados"
-          description="Configure campos adicionais para recolher informações dos participantes"
-        >
-          <div className="space-y-4">
-            {customFields.map((field, index) => (
-              <div
-                key={field.id}
-                className="flex gap-3 items-start p-4 border border-gray-200 rounded-lg bg-gray-50"
-              >
-                <div className="flex-1 grid grid-cols-2 gap-3">
-                  <Input
-                    label="Nome do Campo"
-                    value={field.label}
-                    onChange={(e) => {
-                      const updated = [...customFields];
-                      updated[index].label = e.target.value;
-                      setCustomFields(updated);
-                    }}
-                    placeholder="Ex: Empresa, Cargo, Restrições Alimentares"
-                  />
-
-                  <Select
-                    label="Tipo de Campo"
-                    value={field.type}
-                    onChange={(e) => {
-                      const updated = [...customFields];
-                      updated[index].type = e.target.value;
-                      setCustomFields(updated);
-                    }}
-                  >
-                    <option value="text">Texto</option>
-                    <option value="email">Email</option>
-                    <option value="phone">Telefone</option>
-                    <option value="textarea">Texto Longo</option>
-                    <option value="select">Seleção</option>
-                    <option value="checkbox">Checkbox</option>
-                  </Select>
-
-                  <Input
-                    label="Placeholder (Opcional)"
-                    value={field.placeholder || ''}
-                    onChange={(e) => {
-                      const updated = [...customFields];
-                      updated[index].placeholder = e.target.value;
-                      setCustomFields(updated);
-                    }}
-                    placeholder="Texto de ajuda"
-                  />
-
-                  <div className="flex items-center gap-4 pt-6">
-                    <Switch
-                      checked={field.required}
-                      onChange={(checked) => {
-                        const updated = [...customFields];
-                        updated[index].required = checked;
-                        setCustomFields(updated);
-                      }}
-                      label="Obrigatório"
-                    />
-                  </div>
-                </div>
-
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setCustomFields(customFields.filter((_, i) => i !== index));
-                  }}
-                  className="mt-6"
-                >
-                  <Trash2 size={16} className="text-red-500" />
-                </Button>
-              </div>
-            ))}
-
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setCustomFields([
-                  ...customFields,
-                  {
-                    id: `field_${Date.now()}`,
-                    type: 'text',
-                    label: '',
-                    placeholder: '',
-                    required: false,
-                    order: customFields.length,
-                  },
-                ]);
-              }}
-              className="w-full"
-            >
-              <Plus size={16} />
-              Adicionar Campo Personalizado
-            </Button>
-
-            {customFields.length === 0 && (
-              <p className="text-sm text-gray-500 text-center py-4">
-                Nenhum campo personalizado adicionado. Clique no botão acima para adicionar.
-              </p>
-            )}
+          <div>
+            <label className="block text-sm font-medium text-zinc-300 mb-2">
+              Data de Fim *
+            </label>
+            <input
+              type="datetime-local"
+              value={formData.endDate ? new Date(formData.endDate).toISOString().slice(0, 16) : ''}
+              onChange={(e) => handleChange('endDate', new Date(e.target.value))}
+              className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-primary-500"
+              required
+            />
           </div>
-        </FormSection>
-      </Card>
+        </div>
+      </div>
 
-      {/* Settings */}
-      <Card>
-        <FormSection
-          title="Configurações"
-          description="Opções adicionais do evento"
-        >
-          <div className="space-y-4">
-            <Switch
-              checked={isPublic}
-              onChange={setIsPublic}
-              label="Evento Público"
-              description="Visível para todos os utilizadores na plataforma"
+      {/* Location */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-white">Localização</h2>
+
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-2">
+            Nome do Local *
+          </label>
+          <input
+            type="text"
+            value={formData.location?.name || ''}
+            onChange={(e) => handleLocationChange('name', e.target.value)}
+            className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-primary-500"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-2">
+            Endereço *
+          </label>
+          <input
+            type="text"
+            value={formData.location?.address || ''}
+            onChange={(e) => handleLocationChange('address', e.target.value)}
+            className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-primary-500"
+            required
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-zinc-300 mb-2">
+              Cidade *
+            </label>
+            <input
+              type="text"
+              value={formData.location?.city || ''}
+              onChange={(e) => handleLocationChange('city', e.target.value)}
+              className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-primary-500"
+              required
             />
+          </div>
 
-            <Switch
-              checked={allowTransfers}
-              onChange={setAllowTransfers}
-              label="Permitir Transferências"
-              description="Os compradores podem transferir bilhetes para outros utilizadores"
-            />
+          <div>
+            <label className="block text-sm font-medium text-zinc-300 mb-2">
+              Ilha *
+            </label>
+            <select
+              value={formData.location?.island || 'Santiago'}
+              onChange={(e) => handleLocationChange('island', e.target.value)}
+              className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-primary-500"
+              required
+            >
+              {CABO_VERDE_ISLANDS.map((island) => (
+                <option key={island} value={island}>
+                  {island}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
 
-            <Switch
-              checked={allowRefunds}
-              onChange={setAllowRefunds}
-              label="Permitir Reembolsos"
-              description="Os compradores podem solicitar reembolso"
-            />
+      {/* Event Settings */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-white">Configurações</h2>
 
-            <Switch
-              checked={requireId}
-              onChange={setRequireId}
-              label="Exigir Identificação"
-              description="Verificação de identidade no check-in"
-            />
-
-            <Input
-              label="Restrição de Idade"
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-zinc-300 mb-2">
+              Capacidade *
+            </label>
+            <input
               type="number"
-              value={ageRestriction}
-              onChange={(e) => setAgeRestriction(Number(e.target.value))}
-              min={0}
-              max={21}
-              helperText="0 para sem restrição"
+              value={formData.capacity}
+              onChange={(e) => handleChange('capacity', parseInt(e.target.value))}
+              min={1}
+              className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-primary-500"
+              required
             />
           </div>
-        </FormSection>
-      </Card>
 
-      {/* Actions */}
-      <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-        <Button
+          <div>
+            <label className="block text-sm font-medium text-zinc-300 mb-2">
+              Restrição de Idade
+            </label>
+            <input
+              type="number"
+              value={formData.ageRestriction || ''}
+              onChange={(e) => handleChange('ageRestriction', e.target.value ? parseInt(e.target.value) : undefined)}
+              min={0}
+              max={99}
+              className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-primary-500"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-2">
+            Status *
+          </label>
+          <select
+            value={formData.status}
+            onChange={(e) => handleChange('status', e.target.value)}
+            className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-primary-500"
+            required
+          >
+            <option value="draft">Rascunho</option>
+            <option value="published">Publicado</option>
+          </select>
+        </div>
+
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            id="isPublic"
+            checked={formData.isPublic}
+            onChange={(e) => handleChange('isPublic', e.target.checked)}
+            className="w-4 h-4 text-primary-600 bg-zinc-800 border-zinc-700 rounded focus:ring-primary-500"
+          />
+          <label htmlFor="isPublic" className="ml-2 text-sm font-medium text-zinc-300">
+            Evento Público
+          </label>
+        </div>
+      </div>
+
+      {/* Submit Button */}
+      <div className="flex justify-end gap-4 pt-6 border-t border-zinc-700">
+        <button
           type="button"
-          variant="ghost"
-          onClick={() => router.back()}
-          leftIcon={<ArrowLeftIcon className="h-5 w-5" />}
+          onClick={() => window.history.back()}
+          className="px-6 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+          disabled={isLoading}
         >
           Cancelar
-        </Button>
-
-        <div className="flex gap-3">
-          <Button type="submit" variant="secondary" disabled={isLoading}>
-            Guardar como Rascunho
-          </Button>
-          <Button type="submit" isLoading={isLoading}>
-            Criar Evento
-          </Button>
-        </div>
+        </button>
+        <button
+          type="submit"
+          className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={isLoading}
+        >
+          {isLoading ? 'A guardar...' : 'Guardar Evento'}
+        </button>
       </div>
     </form>
   );

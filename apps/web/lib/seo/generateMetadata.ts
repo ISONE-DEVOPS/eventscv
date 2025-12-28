@@ -77,10 +77,10 @@ export function generateEventMetadata({
 
     // Robots
     robots: {
-      index: event.visibility === 'public',
+      index: event.isPublic,
       follow: true,
       googleBot: {
-        index: event.visibility === 'public',
+        index: event.isPublic,
         follow: true,
         'max-image-preview': 'large',
         'max-snippet': -1,
@@ -103,8 +103,6 @@ export function generateEventMetadata({
       'event:start_time': event.startDate.toString(),
       'event:end_time': event.endDate.toString(),
       'event:location': `${event.venue}, ${event.address}, ${event.city}`,
-      'og:price:amount': event.ticketTypes?.[0]?.price?.toString() || '0',
-      'og:price:currency': 'EUR',
     },
   };
 }
@@ -169,42 +167,22 @@ export function generateEventStructuredData(event: Event) {
     startDate: event.startDate,
     endDate: event.endDate,
     eventStatus: 'https://schema.org/EventScheduled',
-    eventAttendanceMode: event.isOnline
-      ? 'https://schema.org/OnlineEventAttendanceMode'
-      : 'https://schema.org/OfflineEventAttendanceMode',
-    location: event.isOnline
-      ? {
-          '@type': 'VirtualLocation',
-          url: event.streamingUrl,
-        }
-      : {
-          '@type': 'Place',
-          name: event.venue,
-          address: {
-            '@type': 'PostalAddress',
-            streetAddress: event.address,
-            addressLocality: event.city,
+    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+    location: {
+      '@type': 'Place',
+      name: event.venue,
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: event.address,
+        addressLocality: event.city,
             addressCountry: 'CV',
           },
         },
     image: [event.coverImage],
     organizer: {
       '@type': 'Organization',
-      name: event.organizationName || 'Events.cv',
+      name: 'Events.cv',
       url: `https://events.cv/org/${event.organizationId}`,
     },
-    offers: event.ticketTypes?.map((ticket) => ({
-      '@type': 'Offer',
-      name: ticket.name,
-      price: ticket.price,
-      priceCurrency: 'EUR',
-      availability:
-        ticket.quantitySold >= ticket.quantityTotal
-          ? 'https://schema.org/SoldOut'
-          : 'https://schema.org/InStock',
-      url: `https://events.cv/events/${event.slug}`,
-      validFrom: event.salesStartDate || event.publishedAt,
-      validThrough: event.salesEndDate || event.startDate,
-    })),
   };
 }

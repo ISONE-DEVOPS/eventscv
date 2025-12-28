@@ -1,10 +1,11 @@
 import { db } from '../firebase';
 import { collection, doc, getDoc, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+import type { Event } from '@eventscv/shared-types';
 
 /**
  * Get event by ID
  */
-export async function getEvent(eventId: string) {
+export async function getEvent(eventId: string): Promise<Event | null> {
   try {
     const docRef = doc(db, 'events', eventId);
     const docSnap = await getDoc(docRef);
@@ -21,7 +22,7 @@ export async function getEvent(eventId: string) {
       endDate: data.endDate?.toDate(),
       createdAt: data.createdAt?.toDate(),
       updatedAt: data.updatedAt?.toDate(),
-    };
+    } as Event;
   } catch (error) {
     console.error('Error fetching event:', error);
     throw error;

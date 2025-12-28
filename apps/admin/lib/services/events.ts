@@ -59,6 +59,21 @@ export interface EventFormData {
   tags?: string[];
   ageRestriction?: number;
   features?: string[];
+  isPublic?: boolean;
+  settings?: {
+    allowTransfers?: boolean;
+    allowRefunds?: boolean;
+    refundDeadlineHours?: number;
+    requireId?: boolean;
+    ageRestriction?: number;
+    maxTicketsPerOrder?: number;
+  };
+  registration?: {
+    enabled?: boolean;
+    guestRegistrationEnabled?: boolean;
+    customFields?: any[];
+  };
+  ticketTypes?: any[];
 }
 
 // Get all events for an organization

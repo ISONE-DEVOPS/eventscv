@@ -97,7 +97,7 @@ Nos vemos lá!`;
             </button>
 
             {/* Native Share (Mobile) */}
-            {navigator.share && (
+            {typeof navigator !== 'undefined' && navigator.share !== undefined && (
               <button
                 onClick={shareViaNativeShare}
                 className="flex items-center gap-3 px-4 py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg transition-colors border border-gray-200"

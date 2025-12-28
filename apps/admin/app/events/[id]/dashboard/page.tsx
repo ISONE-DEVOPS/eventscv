@@ -179,25 +179,25 @@ export default function EventLiveDashboard() {
   };
 
   return (
-    <DashboardLayout
-      title="Dashboard ao Vivo"
-      actions={
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setAutoRefresh(!autoRefresh)}
-            className={`btn btn-sm ${autoRefresh ? 'btn-primary' : 'btn-ghost'}`}
-          >
-            <RefreshCcw className={`w-4 h-4 ${autoRefresh ? 'animate-spin' : ''}`} />
-            Auto-refresh
-          </button>
-          <button onClick={loadDashboard} className="btn btn-ghost btn-sm">
-            <RefreshCcw className="w-4 h-4" />
-            Actualizar
-          </button>
-        </div>
-      }
-    >
+    <DashboardLayout title="Dashboard ao Vivo">
       <div className="space-y-6">
+        {/* Header with action buttons */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-white">Dashboard ao Vivo</h1>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setAutoRefresh(!autoRefresh)}
+              className={`btn btn-sm ${autoRefresh ? 'btn-primary' : 'btn-ghost'}`}
+            >
+              <RefreshCcw className={`w-4 h-4 ${autoRefresh ? 'animate-spin' : ''}`} />
+              Auto-refresh
+            </button>
+            <button onClick={loadDashboard} className="btn btn-ghost btn-sm">
+              <RefreshCcw className="w-4 h-4" />
+              Actualizar
+            </button>
+          </div>
+        </div>
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Total Sales */}

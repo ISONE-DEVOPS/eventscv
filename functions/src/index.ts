@@ -50,9 +50,14 @@ export {
 // ============================================
 // WALLET FUNCTIONS
 // ============================================
-// export { topUpWallet } from './wallet/topUp';
-// export { processBonus } from './wallet/processBonus';
-// export { updateLoyalty } from './wallet/updateLoyalty';
+export {
+  getWalletBalance,
+  getWalletTransactions,
+  topUpWallet,
+  payWithWallet,
+  refundToWallet,
+  onOrderWalletPayment,
+} from './wallet/walletOperations';
 
 // ============================================
 // NFC FUNCTIONS
@@ -68,8 +73,8 @@ export {
 // ============================================
 // NOTIFICATION FUNCTIONS
 // ============================================
+export { sendPurchaseConfirmation, sendPaymentFailure } from './notifications/email';
 // export { sendPushNotification } from './notifications/sendPush';
-// export { sendEmail } from './notifications/sendEmail';
 // export { eventReminder } from './notifications/eventReminder';
 
 // ============================================

@@ -48,7 +48,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           {(rightIcon || error) && (
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
               {error ? (
-                <ExclamationCircleIcon className="h-5 w-5 text-red-500" />
+                <AlertCircle className="h-5 w-5 text-red-500" />
               ) : (
                 <span className="text-gray-400">{rightIcon}</span>
               )}

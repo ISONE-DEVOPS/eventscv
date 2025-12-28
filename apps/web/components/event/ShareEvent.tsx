@@ -81,7 +81,7 @@ export function ShareEvent({ event, className = '' }: ShareEventProps) {
       <button
         onClick={() => {
           // If native share is available, use it directly
-          if (navigator.share) {
+          if (typeof navigator !== 'undefined' && navigator.share !== undefined) {
             shareViaNativeAPI();
           } else {
             setIsOpen(!isOpen);
@@ -128,7 +128,7 @@ export function ShareEvent({ event, className = '' }: ShareEventProps) {
               {/* Social Media Options */}
               <div className="space-y-1">
                 <button
-                  onClick={shareOnWhatsApp}
+                  onClick={shareViaWhatsApp}
                   className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   <MessageCircle className="h-5 w-5 text-green-500" />

@@ -15,7 +15,13 @@ import {
   Loader2,
   Check,
 } from 'lucide-react';
-import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, updateProfile } from 'firebase/auth';
+import {
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  updateProfile,
+  sendEmailVerification,
+} from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../../lib/firebase';
 
@@ -41,8 +47,29 @@ export default function RegisterPage() {
   const passwordRequirements = [
     { label: 'Mínimo 8 caracteres', met: formData.password.length >= 8 },
     { label: 'Uma letra maiúscula', met: /[A-Z]/.test(formData.password) },
+    { label: 'Uma letra minúscula', met: /[a-z]/.test(formData.password) },
     { label: 'Um número', met: /[0-9]/.test(formData.password) },
   ];
+
+  // Email validation
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Phone validation for Cabo Verde (+238)
+  const isValidPhone = (phone: string): boolean => {
+    // Remove spaces and dashes
+    const cleanPhone = phone.replace(/[\s-]/g, '');
+    // Cabo Verde phone: +238 followed by 7 digits, or just 7 digits
+    const phoneRegex = /^(\+238|238)?[0-9]{7}$/;
+    return phoneRegex.test(cleanPhone);
+  };
+
+  // Name validation (min 2 characters, only letters and spaces)
+  const isValidName = (name: string): boolean => {
+    return name.trim().length >= 2 && /^[a-zA-ZÀ-ÿ\s]+$/.test(name);
+  };
 
   // Helper function to create user document in Firestore
   const createUserDocument = async (userId: string, email: string, name: string, phone?: string) => {
@@ -72,6 +99,24 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Validate name
+    if (!isValidName(formData.name)) {
+      setError('Nome inválido. Usa apenas letras e espaços (mínimo 2 caracteres).');
+      return;
+    }
+
+    // Validate email
+    if (!isValidEmail(formData.email)) {
+      setError('Formato de email inválido.');
+      return;
+    }
+
+    // Validate phone
+    if (formData.phone && !isValidPhone(formData.phone)) {
+      setError('Número de telefone inválido. Usa o formato: +238 999 9999 ou 9999999');
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       setError('As passwords não coincidem.');
@@ -103,6 +148,18 @@ export default function RegisterPage() {
         displayName: formData.name,
       });
 
+      // Send email verification
+      try {
+        await sendEmailVerification(userCredential.user, {
+          url: `${window.location.origin}/profile`,
+          handleCodeInApp: false,
+        });
+        console.log('Verification email sent successfully');
+      } catch (emailError) {
+        console.error('Error sending verification email:', emailError);
+        // Don't fail registration if email sending fails
+      }
+
       // Create user document in Firestore
       await createUserDocument(
         userCredential.user.uid,
@@ -112,7 +169,7 @@ export default function RegisterPage() {
       );
 
       // Redirect to profile page
-      router.push('/profile');
+      router.push('/profile?newUser=true');
     } catch (err: any) {
       console.error('Registration error:', err);
 

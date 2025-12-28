@@ -18,6 +18,7 @@ import {
 import { db, functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
 import type { OrganizationRole, Permission } from '@eventscv/shared-types';
+import { DEFAULT_PERMISSIONS } from '@eventscv/shared-types';
 
 const ORGANIZATIONS_COLLECTION = 'organizations';
 const MEMBERS_SUBCOLLECTION = 'members';
@@ -292,38 +293,12 @@ export async function resendInvitation(
 // ROLE PERMISSIONS MAPPING
 // ============================================
 
-export const ROLE_PERMISSIONS: Record<OrganizationRole, Permission[]> = {
-  admin: [
-    'manage_organization',
-    'manage_events',
-    'manage_members',
-    'view_analytics',
-    'manage_payouts',
-    'manage_tickets',
-    'manage_vendors',
-    'check_in_tickets',
-    'view_event_details',
-    'process_cashless',
-  ],
-  promoter: [
-    'manage_events',
-    'view_analytics',
-    'manage_tickets',
-    'manage_vendors',
-    'check_in_tickets',
-    'view_event_details',
-    'process_cashless',
-  ],
-  staff: [
-    'check_in_tickets',
-    'view_event_details',
-    'process_cashless',
-  ],
-};
+// Using DEFAULT_PERMISSIONS from shared-types
+export const ROLE_PERMISSIONS = DEFAULT_PERMISSIONS;
 
 // Helper function to get default permissions for a role
 export function getDefaultPermissions(role: OrganizationRole): Permission[] {
-  return ROLE_PERMISSIONS[role] || [];
+  return DEFAULT_PERMISSIONS[role] || [];
 }
 
 // ============================================

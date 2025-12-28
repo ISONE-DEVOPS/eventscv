@@ -108,7 +108,7 @@ export default function Modal({
                   onClick={onClose}
                   className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
                 >
-                  <XMarkIcon className="h-6 w-6 text-gray-400" />
+                  <X className="h-6 w-6 text-gray-400" />
                 </button>
               )}
             </div>

@@ -40,7 +40,7 @@ export function Header({ title }: HeaderProps) {
     <header className="dashboard-header">
       {/* Left side */}
       <div className="flex items-center gap-4">
-        {title && <h1 className="text-xl font-semibold text-white">{title}</h1>}
+        {title && <h1 className="text-xl font-semibold text-[hsl(var(--foreground))]">{title}</h1>}
       </div>
 
       {/* Right side */}
@@ -49,13 +49,13 @@ export function Header({ title }: HeaderProps) {
         <div className="relative hidden md:block">
           <Search
             size={18}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--foreground-muted))]"
           />
           <input
             type="text"
             placeholder="Pesquisar..."
-            className="w-64 pl-10 pr-4 py-2 rounded-xl bg-background-secondary
-                       border border-white/5 text-sm text-white placeholder:text-zinc-500
+            className="w-64 pl-10 pr-4 py-2 rounded-xl bg-[hsl(var(--background-secondary))]
+                       border border-[hsl(var(--border-color))] text-sm text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--foreground-muted))]
                        focus:border-brand-primary focus:outline-none transition-colors"
           />
         </div>
@@ -67,11 +67,11 @@ export function Header({ title }: HeaderProps) {
         <div className="relative">
           <button
             onClick={() => setShowNotifications(!showNotifications)}
-            className="relative p-2 rounded-xl text-zinc-400 hover:text-white
-                       hover:bg-white/5 transition-colors"
+            className="relative p-2 rounded-xl text-[hsl(var(--foreground-muted))] hover:text-[hsl(var(--foreground))]
+                       hover:bg-gradient-to-r hover:from-brand-primary/10 hover:to-transparent transition-colors"
           >
             <Bell size={20} />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-error rounded-full" />
+            <span className="absolute top-1 right-1 w-2 h-2 bg-[hsl(var(--error))] rounded-full" />
           </button>
 
           {showNotifications && (
@@ -81,13 +81,13 @@ export function Header({ title }: HeaderProps) {
                 onClick={() => setShowNotifications(false)}
               />
               <div className="dropdown-menu w-80 z-50">
-                <div className="px-4 py-3 border-b border-white/10">
-                  <h3 className="font-semibold text-white">Notificacoes</h3>
+                <div className="px-4 py-3 border-b border-[hsl(var(--border-color))]">
+                  <h3 className="font-semibold text-[hsl(var(--foreground))]">Notificacoes</h3>
                 </div>
                 <div className="max-h-80 overflow-y-auto">
                   <div className="empty-state py-8">
-                    <Bell size={32} className="text-zinc-600 mb-2" />
-                    <p className="text-sm text-zinc-400">Sem notificacoes</p>
+                    <Bell size={32} className="text-[hsl(var(--foreground-muted))] mb-2" />
+                    <p className="text-sm text-[hsl(var(--foreground-secondary))]">Sem notificacoes</p>
                   </div>
                 </div>
               </div>
@@ -99,7 +99,7 @@ export function Header({ title }: HeaderProps) {
         <div className="relative">
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
-            className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-colors"
+            className="flex items-center gap-3 p-2 rounded-xl hover:bg-gradient-to-r hover:from-brand-primary/10 hover:to-transparent transition-colors"
           >
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary
                             flex items-center justify-center">
@@ -108,12 +108,12 @@ export function Header({ title }: HeaderProps) {
               </span>
             </div>
             <div className="hidden md:block text-left">
-              <p className="text-sm font-medium text-white">
+              <p className="text-sm font-medium text-[hsl(var(--foreground))]">
                 {user?.displayName || user?.email?.split('@')[0]}
               </p>
-              <p className="text-xs text-zinc-500">{getUserRole(claims)}</p>
+              <p className="text-xs text-[hsl(var(--foreground-muted))]">{getUserRole(claims)}</p>
             </div>
-            <ChevronDown size={16} className="hidden md:block text-zinc-400" />
+            <ChevronDown size={16} className="hidden md:block text-[hsl(var(--foreground-muted))]" />
           </button>
 
           {showUserMenu && (
@@ -123,11 +123,11 @@ export function Header({ title }: HeaderProps) {
                 onClick={() => setShowUserMenu(false)}
               />
               <div className="dropdown-menu z-50">
-                <div className="px-4 py-3 border-b border-white/10">
-                  <p className="text-sm font-medium text-white">
+                <div className="px-4 py-3 border-b border-[hsl(var(--border-color))]">
+                  <p className="text-sm font-medium text-[hsl(var(--foreground))]">
                     {user?.displayName || 'Utilizador'}
                   </p>
-                  <p className="text-xs text-zinc-500">{user?.email}</p>
+                  <p className="text-xs text-[hsl(var(--foreground-muted))]">{user?.email}</p>
                 </div>
                 <div className="py-1">
                   <button className="dropdown-item w-full">
@@ -147,7 +147,7 @@ export function Header({ title }: HeaderProps) {
                 <div className="py-1">
                   <button
                     onClick={handleLogout}
-                    className="dropdown-item w-full text-error hover:bg-error/10"
+                    className="dropdown-item w-full text-[hsl(var(--error))] hover:bg-[hsl(var(--error))]/10"
                   >
                     <LogOut size={16} />
                     <span>Terminar Sessao</span>

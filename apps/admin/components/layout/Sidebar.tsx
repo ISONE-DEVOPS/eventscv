@@ -126,7 +126,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           </div>
           {!collapsed && (
             <div>
-              <span className="font-display font-bold text-white">EventsCV</span>
+              <span className="font-display font-bold text-[hsl(var(--foreground))]">EventsCV</span>
               {superAdmin && (
                 <span className="block text-xs text-brand-primary">Super Admin</span>
               )}
@@ -164,25 +164,25 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Organization Info (non super-admin) */}
       {!superAdmin && organization && !collapsed && (
-        <div className="px-4 py-3 border-t border-white/5">
+        <div className="px-4 py-3 border-t border-[hsl(var(--border-color))]">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-brand-primary/20 flex items-center justify-center">
               <Building2 size={16} className="text-brand-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{organization.name}</p>
-              <p className="text-xs text-zinc-500 capitalize">{claims?.organizationRole}</p>
+              <p className="text-sm font-medium text-[hsl(var(--foreground))] truncate">{organization.name}</p>
+              <p className="text-xs text-[hsl(var(--foreground-muted))] capitalize">{claims?.organizationRole}</p>
             </div>
           </div>
         </div>
       )}
 
       {/* Toggle Button */}
-      <div className="p-3 border-t border-white/5">
+      <div className="p-3 border-t border-[hsl(var(--border-color))]">
         <button
           onClick={onToggle}
           className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl
-                     text-zinc-400 hover:text-white hover:bg-sidebar-hover transition-colors"
+                     text-[hsl(var(--foreground-muted))] hover:text-[hsl(var(--foreground))] hover:bg-gradient-to-r hover:from-brand-primary/10 hover:to-transparent transition-colors"
         >
           {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
           {!collapsed && <span className="text-sm">Recolher</span>}

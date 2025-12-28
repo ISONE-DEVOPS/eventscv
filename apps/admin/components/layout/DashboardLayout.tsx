@@ -91,10 +91,20 @@ export function DashboardLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-primary to-brand-secondary animate-pulse" />
-          <p className="text-zinc-400">A carregar...</p>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-background-secondary flex items-center justify-center">
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-primary to-brand-secondary shadow-2xl shadow-brand-primary/30 animate-pulse" />
+            <div className="absolute inset-0 w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-primary to-brand-secondary blur-xl opacity-50 animate-pulse" />
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex gap-1.5">
+              <div className="w-2 h-2 bg-brand-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+              <div className="w-2 h-2 bg-brand-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+              <div className="w-2 h-2 bg-brand-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+            <p className="text-zinc-500 dark:text-zinc-400 font-medium">A carregar...</p>
+          </div>
         </div>
       </div>
     );

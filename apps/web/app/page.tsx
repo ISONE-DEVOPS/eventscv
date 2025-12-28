@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -21,54 +24,20 @@ import {
   Star,
 } from 'lucide-react';
 import { ThemeToggle } from './theme-toggle';
+import { db } from '../lib/firebase';
+import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 
-// Mock data for featured events
-const featuredEvents = [
-  {
-    id: '1',
-    title: 'Festival Baía das Gatas 2024',
-    image: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=500&fit=crop',
-    date: 'SAB, 15 DEZ',
-    location: 'Mindelo, São Vicente',
-    price: 2500,
-    category: 'Música',
-    isHot: true,
-    attendees: 1250,
-  },
-  {
-    id: '2',
-    title: 'Noite de Jazz no Quintal',
-    image: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=800&h=500&fit=crop',
-    date: 'SEX, 20 DEZ',
-    location: 'Praia, Santiago',
-    price: 1500,
-    category: 'Música',
-    isHot: false,
-    attendees: 340,
-  },
-  {
-    id: '3',
-    title: 'Beach Party Sal 2024',
-    image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&h=500&fit=crop',
-    date: 'SÁB, 28 DEZ',
-    location: 'Santa Maria, Sal',
-    price: 3000,
-    category: 'Festa',
-    isHot: true,
-    attendees: 890,
-  },
-  {
-    id: '4',
-    title: 'Corrida da Cidade Velha',
-    image: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=800&h=500&fit=crop',
-    date: 'DOM, 5 JAN',
-    location: 'Cidade Velha, Santiago',
-    price: 500,
-    category: 'Desporto',
-    isHot: false,
-    attendees: 520,
-  },
-];
+interface FeaturedEvent {
+  id: string;
+  title: string;
+  image: string;
+  date: string;
+  location: string;
+  price: number;
+  category: string;
+  isHot: boolean;
+  attendees: number;
+}
 
 const categories = [
   { name: 'Música', icon: Music, color: 'from-violet-500 to-purple-600' },
@@ -85,6 +54,57 @@ const stats = [
 ];
 
 export default function HomePage() {
+  const [featuredEvents, setFeaturedEvents] = useState<FeaturedEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadFeaturedEvents();
+  }, []);
+
+  const loadFeaturedEvents = async () => {
+    try {
+      const eventsRef = collection(db, 'events');
+      const q = query(
+        eventsRef,
+        where('status', '==', 'published'),
+        where('isFeatured', '==', true),
+        orderBy('featuredUntil', 'desc'),
+        limit(4)
+      );
+
+      const snapshot = await getDocs(q);
+      const events: FeaturedEvent[] = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        const startDate = data.startDate?.toDate() || new Date();
+        const minPrice = data.ticketTypes && data.ticketTypes.length > 0
+          ? Math.min(...data.ticketTypes.map((t: any) => t.price))
+          : 0;
+
+        return {
+          id: doc.id,
+          title: data.title || 'Sem título',
+          image: data.coverImage || 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=500&fit=crop',
+          date: startDate.toLocaleDateString('pt-PT', {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short',
+          }).toUpperCase(),
+          location: `${data.city || ''}, ${data.island || ''}`,
+          price: minPrice,
+          category: data.category || 'Outro',
+          isHot: data.ticketsSold > (data.totalCapacity * 0.7) || false,
+          attendees: data.ticketsSold || 0,
+        };
+      });
+
+      setFeaturedEvents(events);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error loading featured events:', error);
+      setLoading(false);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-background">
       {/* ===== HEADER ===== */}
@@ -268,7 +288,21 @@ export default function HomePage() {
 
           {/* Events Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredEvents.map((event, index) => (
+            {loading ? (
+              // Loading skeletons
+              [...Array(4)].map((_, index) => (
+                <div key={index} className="glass-card animate-pulse">
+                  <div className="relative aspect-[16/10] bg-zinc-800 rounded-t-2xl" />
+                  <div className="p-6 space-y-3">
+                    <div className="h-4 bg-zinc-800 rounded w-1/2" />
+                    <div className="h-6 bg-zinc-800 rounded w-full" />
+                    <div className="h-4 bg-zinc-800 rounded w-3/4" />
+                    <div className="h-8 bg-zinc-800 rounded w-1/3" />
+                  </div>
+                </div>
+              ))
+            ) : featuredEvents.length > 0 ? (
+              featuredEvents.map((event, index) => (
               <Link
                 key={event.id}
                 href={`/events/${event.id}`}
@@ -331,7 +365,24 @@ export default function HomePage() {
                   </div>
                 </div>
               </Link>
-            ))}
+            ))
+            ) : (
+              // No events found
+              <div className="col-span-full text-center py-16">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-zinc-800/50 mb-4">
+                  <Ticket className="h-8 w-8 text-zinc-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-white mb-2">
+                  Nenhum evento em destaque
+                </h3>
+                <p className="text-zinc-400 mb-6">
+                  Explore todos os eventos disponíveis
+                </p>
+                <Link href="/events" className="btn btn-primary">
+                  Ver Todos os Eventos
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* Mobile CTA */}
