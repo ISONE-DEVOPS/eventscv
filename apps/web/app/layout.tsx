@@ -16,6 +16,7 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://events.cv'),
   title: {
     default: 'EventsCV - Plataforma de Eventos de Cabo Verde',
     template: '%s | EventsCV',

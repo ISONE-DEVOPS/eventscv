@@ -25,6 +25,7 @@ import { getEvent } from '../../../lib/services/events';
 import { GuestRegistrationModal } from '../../../components/events/GuestRegistrationModal';
 import { ShareEvent } from '../../../components/event/ShareEvent';
 import { AddToCalendar } from '../../../components/event/AddToCalendar';
+import { LyraWidget } from '../../../components/chat/LyraWidget';
 
 // Mock event data (fallback)
 const mockEventData = {
@@ -513,6 +514,9 @@ export default function EventDetailClient() {
         eventTitle={event.title}
         customFields={event.registration?.customFields || []}
       />
+
+      {/* Lyra AI Chat Assistant */}
+      <LyraWidget eventId={event.id} language="pt" />
     </main>
   );
 }
