@@ -3,11 +3,13 @@
 import { useState } from 'react';
 import { Image, Trash2, Plus } from 'lucide-react';
 import { EventFormData } from '@/lib/services/events';
+import { PosterGenerator } from '../ai/PosterGenerator';
 
 interface EventFormProps {
   initialData?: Partial<EventFormData>;
   onSubmit: (data: EventFormData) => void;
   isLoading?: boolean;
+  eventId?: string; // For AI poster generation (only available when editing)
 }
 
 const CABO_VERDE_ISLANDS = [
@@ -34,7 +36,7 @@ const EVENT_CATEGORIES = [
   'Outro',
 ];
 
-export default function EventForm({ initialData, onSubmit, isLoading }: EventFormProps) {
+export default function EventForm({ initialData, onSubmit, isLoading, eventId }: EventFormProps) {
   const [formData, setFormData] = useState<Partial<EventFormData>>({
     title: '',
     description: '',
@@ -51,6 +53,7 @@ export default function EventForm({ initialData, onSubmit, isLoading }: EventFor
     capacity: 1000,
     status: 'draft',
     isPublic: true,
+    coverImage: '',
     ...initialData,
   });
 
@@ -298,6 +301,20 @@ export default function EventForm({ initialData, onSubmit, isLoading }: EventFor
           </label>
         </div>
       </div>
+
+      {/* AI Poster Generator - Only available when editing an existing event */}
+      {eventId && formData.title && (
+        <div className="space-y-4">
+          <div className="p-6 bg-zinc-800/50 border border-white/10 rounded-xl">
+            <PosterGenerator
+              eventId={eventId}
+              eventTitle={formData.title || 'Evento'}
+              currentCoverImage={formData.coverImage}
+              onPosterGenerated={(imageUrl) => handleChange('coverImage', imageUrl)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Submit Button */}
       <div className="flex justify-end gap-4 pt-6 border-t border-zinc-700">

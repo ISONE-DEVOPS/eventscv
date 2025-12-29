@@ -161,15 +161,23 @@ export default function RegisterPage() {
       }
 
       // Create user document in Firestore
-      await createUserDocument(
-        userCredential.user.uid,
-        formData.email,
-        formData.name,
-        formData.phone
-      );
+      try {
+        await createUserDocument(
+          userCredential.user.uid,
+          formData.email,
+          formData.name,
+          formData.phone
+        );
+      } catch (docError) {
+        console.error('Error creating user document:', docError);
+        // Continue anyway - user is registered even if document creation fails
+      }
+
+      // Wait a bit for auth state to propagate
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Redirect to profile page
-      router.push('/profile?newUser=true');
+      window.location.href = '/profile?newUser=true';
     } catch (err: any) {
       console.error('Registration error:', err);
 
@@ -202,15 +210,23 @@ export default function RegisterPage() {
       const result = await signInWithPopup(auth, provider);
 
       // Create user document in Firestore
-      await createUserDocument(
-        result.user.uid,
-        result.user.email || '',
-        result.user.displayName || 'Utilizador',
-        result.user.phoneNumber || undefined
-      );
+      try {
+        await createUserDocument(
+          result.user.uid,
+          result.user.email || '',
+          result.user.displayName || 'Utilizador',
+          result.user.phoneNumber || undefined
+        );
+      } catch (docError) {
+        console.error('Error creating user document:', docError);
+        // Continue anyway - user is registered even if document creation fails
+      }
+
+      // Wait a bit for auth state to propagate
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Redirect to profile page
-      router.push('/profile');
+      window.location.href = '/profile';
     } catch (err: any) {
       console.error('Google auth error:', err);
 

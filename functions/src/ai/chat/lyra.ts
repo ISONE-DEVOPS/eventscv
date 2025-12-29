@@ -1,5 +1,5 @@
 import * as functions from 'firebase-functions/v2';
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { getFirestore } from 'firebase-admin/firestore';
 import type {
   ChatContext,
@@ -10,15 +10,15 @@ import type {
 } from '../../shared-types';
 
 // Lazy initialization
-let anthropicClient: Anthropic | null = null;
+let openaiClient: OpenAI | null = null;
 
-function getAnthropic(): Anthropic {
-  if (!anthropicClient) {
-    anthropicClient = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
+function getOpenAI(): OpenAI {
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
     });
   }
-  return anthropicClient;
+  return openaiClient;
 }
 
 const LYRA_SYSTEM_PROMPT = `Você é a Lyra, a assistente virtual do Events.cv - a plataforma de eventos de Cabo Verde.
@@ -43,6 +43,7 @@ CAPACIDADES:
 4. Fornecer suporte técnico (problemas com conta, bilhetes, pagamentos)
 5. Partilhar informações culturais cabo-verdianas
 6. Criar FOMO (Fear Of Missing Out) quando eventos estão quase esgotados
+7. Explicar sobre a plataforma Events.cv (funcionalidades, como funciona, vantagens)
 
 REGRAS:
 - NUNCA inventes informações - se não sabes, diz claramente
@@ -52,15 +53,18 @@ REGRAS:
 - Sempre oferece ações concretas (botões) quando possível
 - Sê breve - max 2-3 frases por resposta
 - Adapta o idioma ao user automaticamente
+- Se o user é 'visitante' (anônimo), sugere criar conta para aceder a funcionalidades personalizadas
+- Para visitantes anônimos, foca em descoberta de eventos e informações da plataforma
 
 AÇÕES QUE PODES SUGERIR:
-- Comprar bilhetes
+- Comprar bilhetes (apenas para users autenticados)
 - Ver no mapa
 - Partilhar evento
 - Adicionar ao calendário
-- Ver os meus bilhetes
+- Ver os meus bilhetes (apenas para users autenticados)
 - Contactar suporte
 - Descobrir mais eventos
+- Criar conta (para visitantes anônimos)
 
 EXEMPLOS DE INTERAÇÃO:
 
@@ -82,29 +86,38 @@ async function buildChatContext(
 ): Promise<ChatContext> {
   const db = getFirestore();
 
-  // Get user data
-  const userDoc = await db.collection('users').doc(userId).get();
-  const userData = userDoc.data();
+  const isAnonymous = userId === 'anonymous';
 
-  // Get user's past events
-  const ticketsSnapshot = await db
-    .collection('tickets')
-    .where('userId', '==', userId)
-    .where('status', '==', 'active')
-    .orderBy('purchasedAt', 'desc')
-    .limit(10)
-    .get();
+  let userData: any = null;
+  let pastEvents: string[] = [];
+  let loyaltyData: any = null;
 
-  const pastEvents = ticketsSnapshot.docs.map(doc => doc.data().eventId);
+  // Only fetch user data if not anonymous
+  if (!isAnonymous) {
+    // Get user data
+    const userDoc = await db.collection('users').doc(userId).get();
+    userData = userDoc.data();
 
-  // Get user's loyalty data
-  const loyaltyDoc = await db.collection('loyalty').doc(userId).get();
-  const loyaltyData = loyaltyDoc.data();
+    // Get user's past events
+    const ticketsSnapshot = await db
+      .collection('tickets')
+      .where('userId', '==', userId)
+      .where('status', '==', 'active')
+      .orderBy('purchasedAt', 'desc')
+      .limit(10)
+      .get();
+
+    pastEvents = ticketsSnapshot.docs.map(doc => doc.data().eventId);
+
+    // Get user's loyalty data
+    const loyaltyDoc = await db.collection('loyalty').doc(userId).get();
+    loyaltyData = loyaltyDoc.data();
+  }
 
   const context: ChatContext = {
     user: {
       id: userId,
-      name: userData?.name || 'amigo',
+      name: isAnonymous ? 'visitante' : (userData?.name || 'amigo'),
       language: userData?.language || 'pt',
       location: userData?.city,
       pastEvents,
@@ -218,14 +231,23 @@ function extractActions(
   intent: ChatIntent
 ): AIAction[] {
   const actions: AIAction[] = [];
+  const isAnonymous = context.user.id === 'anonymous';
 
   // If event context exists and user seems interested in purchasing
   if (context.event && (intent === 'purchase' || responseText.includes('comprar') || responseText.includes('buy'))) {
-    actions.push({
-      label: 'Comprar Bilhetes',
-      action: 'buy_tickets',
-      data: { eventId: context.event.id },
-    });
+    if (isAnonymous) {
+      // Suggest creating account instead of direct purchase
+      actions.push({
+        label: 'Criar Conta',
+        action: 'create_account',
+      });
+    } else {
+      actions.push({
+        label: 'Comprar Bilhetes',
+        action: 'buy_tickets',
+        data: { eventId: context.event.id },
+      });
+    }
   }
 
   // If event context exists, offer to show map
@@ -265,6 +287,17 @@ function extractActions(
     });
   }
 
+  // If anonymous and asking about platform, suggest creating account
+  if (isAnonymous && (intent === 'question' || responseText.includes('conta') || responseText.includes('regist'))) {
+    // Only add if not already added
+    if (!actions.find(a => a.action === 'create_account')) {
+      actions.push({
+        label: 'Criar Conta',
+        action: 'create_account',
+      });
+    }
+  }
+
   return actions;
 }
 
@@ -274,7 +307,7 @@ function extractActions(
 export const chat = functions.https.onCall(
   {
     region: 'europe-west1',
-    cors: ['https://events.cv', 'https://www.events.cv'],
+    cors: true, // Allow all origins
   },
   async (request) => {
     const { message, userId, eventId, language } = request.data;
@@ -295,8 +328,13 @@ export const chat = functions.https.onCall(
       // Detect intent
       const intent = detectIntent(message);
 
-      // Build messages for Claude
-      const messages: Anthropic.Messages.MessageParam[] = [
+      // Build messages for OpenAI
+      const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+        // System prompt
+        {
+          role: 'system',
+          content: LYRA_SYSTEM_PROMPT,
+        },
         // Add conversation history
         ...context.conversationHistory.map(msg => ({
           role: msg.role === 'user' ? 'user' as const : 'assistant' as const,
@@ -322,17 +360,15 @@ ${context.event ? `
         },
       ];
 
-      // Call Claude API
-      const response = await getAnthropic().messages.create({
-        model: 'claude-3-5-sonnet-20241022',
+      // Call OpenAI API
+      const response = await getOpenAI().chat.completions.create({
+        model: 'gpt-4o-mini',
         max_tokens: 500,
-        system: LYRA_SYSTEM_PROMPT,
+        temperature: 0.7,
         messages,
       });
 
-      const responseText = response.content[0].type === 'text'
-        ? response.content[0].text
-        : '';
+      const responseText = response.choices[0]?.message?.content || '';
 
       // Extract actions
       const actions = extractActions(responseText, context, intent);
@@ -359,7 +395,7 @@ ${context.event ? `
         content: responseText,
         language: language || context.user.language,
         metadata: {
-          model: 'claude-3-5-sonnet-20241022',
+          model: 'gpt-4o-mini',
           actions: actions.map(a => a.action),
         },
         createdAt: new Date(),

@@ -448,3 +448,235 @@ EventsCV
     });
   }
 }
+
+/**
+ * Send calendar event notification to subscriber
+ */
+interface CalendarEventNotification {
+  recipientEmail: string;
+  recipientName: string;
+  calendarName: string;
+  calendarSlug: string;
+  eventTitle: string;
+  eventDescription: string;
+  eventDate: Date | any;
+  eventId: string;
+}
+
+export async function sendCalendarEventNotification(
+  notification: CalendarEventNotification
+): Promise<void> {
+  if (!SMTP_PASS) {
+    console.warn('SMTP password not configured. Email not sent.');
+    return;
+  }
+
+  const {
+    recipientEmail,
+    recipientName,
+    calendarName,
+    calendarSlug,
+    eventTitle,
+    eventDescription,
+    eventDate,
+    eventId,
+  } = notification;
+
+  // Format date
+  const formattedDate =
+    eventDate instanceof Date
+      ? eventDate.toLocaleDateString('pt-PT', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        })
+      : eventDate.toDate
+      ? eventDate
+          .toDate()
+          .toLocaleDateString('pt-PT', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          })
+      : 'Data a confirmar';
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Novo Evento - ${calendarName}</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">
+                🎉 Novo Evento em ${calendarName}
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 30px;">
+              <p style="margin: 0; font-size: 16px; color: #333;">
+                Olá <strong>${recipientName}</strong>,
+              </p>
+              <p style="margin: 15px 0 0; font-size: 16px; color: #666; line-height: 1.6;">
+                Temos novidades! Um novo evento foi adicionado ao calendário <strong>${calendarName}</strong> que subscreveste.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Event Details Card -->
+          <tr>
+            <td style="padding: 0 30px 30px;">
+              <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border-radius: 12px; padding: 25px;">
+                <h2 style="margin: 0 0 15px; font-size: 22px; color: #333;">
+                  ${eventTitle}
+                </h2>
+                <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                  <span style="font-size: 16px; color: #666;">
+                    📅 ${formattedDate}
+                  </span>
+                </div>
+                <p style="margin: 15px 0 0; font-size: 15px; color: #555; line-height: 1.6;">
+                  ${eventDescription || 'Mais detalhes em breve...'}
+                </p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- CTA Button -->
+          <tr>
+            <td style="padding: 0 30px 30px;" align="center">
+              <table cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 14px 32px;">
+                    <a href="https://events.cv/events/${eventId}" style="color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; display: block;">
+                      Ver Detalhes do Evento
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 15px 0 0; font-size: 14px; color: #999;">
+                <a href="https://events.cv/calendars/${calendarSlug}" style="color: #667eea; text-decoration: none;">
+                  Ver todos os eventos de ${calendarName}
+                </a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Info Box -->
+          <tr>
+            <td style="padding: 0 30px 30px;">
+              <div style="background-color: #e7f3ff; border-left: 4px solid #2196f3; padding: 15px; border-radius: 4px;">
+                <p style="margin: 0; font-size: 14px; color: #333; font-weight: 600;">
+                  💡 Subscrito a ${calendarName}
+                </p>
+                <p style="margin: 10px 0 0; font-size: 14px; color: #666; line-height: 1.6;">
+                  Vais receber notificações sempre que novos eventos forem adicionados a este calendário.
+                  <a href="https://events.cv/profile/subscriptions" style="color: #2196f3; text-decoration: none;">Gerir subscrições</a>
+                </p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f8f9fa; padding: 30px; text-align: center; border-top: 1px solid #eee;">
+              <p style="margin: 0; font-size: 14px; color: #666;">
+                Tens alguma dúvida? Contacta-nos:
+              </p>
+              <p style="margin: 10px 0 0;">
+                <a href="mailto:support@events.cv" style="color: #667eea; text-decoration: none; font-weight: 600;">
+                  support@events.cv
+                </a>
+              </p>
+              <p style="margin: 20px 0 10px; font-size: 12px; color: #999;">
+                <a href="https://events.cv/calendars/${calendarSlug}" style="color: #999; text-decoration: none;">
+                  Cancelar subscrição
+                </a>
+              </p>
+              <p style="margin: 10px 0 0; font-size: 13px; color: #999;">
+                © ${new Date().getFullYear()} EventsCV. Todos os direitos reservados.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  const textContent = `
+Olá ${recipientName},
+
+Temos novidades! Um novo evento foi adicionado ao calendário ${calendarName} que subscreveste.
+
+EVENTO: ${eventTitle}
+DATA: ${formattedDate}
+
+${eventDescription || 'Mais detalhes em breve...'}
+
+Ver detalhes: https://events.cv/events/${eventId}
+Ver calendário: https://events.cv/calendars/${calendarSlug}
+
+---
+Subscrito a ${calendarName}
+Gerir subscrições: https://events.cv/profile/subscriptions
+
+Obrigado,
+EventsCV
+  `.trim();
+
+  const mailOptions = {
+    from: `"${calendarName} via EventsCV" <${FROM_EMAIL}>`,
+    to: recipientEmail,
+    subject: `🎉 Novo evento: ${eventTitle}`,
+    html,
+    text: textContent,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`Calendar event notification sent to ${recipientEmail} for event ${eventId}`);
+
+    // Log email sent
+    await admin.firestore().collection('email-logs').add({
+      type: 'calendar_event_notification',
+      to: recipientEmail,
+      eventId,
+      calendarSlug,
+      status: 'sent',
+      sentAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  } catch (error: any) {
+    console.error('Error sending calendar event notification:', error);
+
+    // Log email error
+    await admin.firestore().collection('email-logs').add({
+      type: 'calendar_event_notification',
+      to: recipientEmail,
+      eventId,
+      calendarSlug,
+      status: 'failed',
+      error: error.message,
+      sentAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    throw error;
+  }
+}

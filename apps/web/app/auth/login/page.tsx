@@ -160,17 +160,25 @@ function LoginPageContent() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
       // Ensure user document exists
-      await ensureUserDocument(
-        userCredential.user.uid,
-        userCredential.user.email || email,
-        userCredential.user.displayName || undefined
-      );
+      try {
+        await ensureUserDocument(
+          userCredential.user.uid,
+          userCredential.user.email || email,
+          userCredential.user.displayName || undefined
+        );
+      } catch (docError) {
+        console.error('Error creating user document:', docError);
+        // Continue anyway - user is authenticated even if document creation fails
+      }
 
       // Reset login attempts on success
       resetLoginAttempts();
 
+      // Wait a bit for auth state to propagate
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // Redirect to original page or home
-      router.push(redirectUrl);
+      window.location.href = redirectUrl;
     } catch (err: any) {
       console.error('Login error:', err);
 
@@ -218,17 +226,25 @@ function LoginPageContent() {
       const result = await signInWithPopup(auth, provider);
 
       // Ensure user document exists
-      await ensureUserDocument(
-        result.user.uid,
-        result.user.email || '',
-        result.user.displayName || 'Utilizador'
-      );
+      try {
+        await ensureUserDocument(
+          result.user.uid,
+          result.user.email || '',
+          result.user.displayName || 'Utilizador'
+        );
+      } catch (docError) {
+        console.error('Error creating user document:', docError);
+        // Continue anyway - user is authenticated even if document creation fails
+      }
 
       // Reset login attempts on success
       resetLoginAttempts();
 
+      // Wait a bit for auth state to propagate
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // Redirect
-      router.push(redirectUrl);
+      window.location.href = redirectUrl;
     } catch (err: any) {
       console.error('Google auth error:', err);
 

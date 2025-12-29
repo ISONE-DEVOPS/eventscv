@@ -26,6 +26,7 @@ import {
 import { ThemeToggle } from './theme-toggle';
 import { db } from '../lib/firebase';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { LyraWidget } from '../components/chat/LyraWidget';
 
 interface FeaturedEvent {
   id: string;
@@ -596,6 +597,9 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+
+      {/* Lyra Chat Assistant */}
+      <LyraWidget language="pt" />
     </main>
   );
 }

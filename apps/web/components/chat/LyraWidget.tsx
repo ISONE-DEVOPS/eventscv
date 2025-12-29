@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { MessageCircle, X, Send, Loader2, Sparkles } from 'lucide-react';
+import { X, Send, Loader2, Sparkles } from 'lucide-react';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth } from '../../lib/firebase';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { auth, functions } from '../../lib/firebase';
+import { httpsCallable } from 'firebase/functions';
 import type { ChatResponse, AIAction } from '@eventscv/shared-types';
 
 interface Message {
@@ -45,11 +45,17 @@ export function LyraWidget({ eventId, language = 'pt' }: LyraWidgetProps) {
 
   // Load welcome message
   useEffect(() => {
-    if (isOpen && messages.length === 0 && user) {
+    if (isOpen && messages.length === 0) {
       const welcomeMessages = {
-        pt: 'Olá! 👋 Sou a Lyra, a tua assistente virtual. Como posso ajudar-te hoje?',
-        en: 'Hello! 👋 I\'m Lyra, your virtual assistant. How can I help you today?',
-        cv: 'Olá! 👋 N e Lyra, bu assistente virtual. Mod ki N pode djudá-bu oji?',
+        pt: user
+          ? 'Olá! 👋 Sou a Lyra, a tua assistente virtual. Como posso ajudar-te hoje?'
+          : 'Olá! 👋 Sou a Lyra, a assistente virtual do Events.cv. Posso ajudar-te a descobrir eventos, responder perguntas sobre a plataforma e muito mais. Como posso ajudar?',
+        en: user
+          ? 'Hello! 👋 I\'m Lyra, your virtual assistant. How can I help you today?'
+          : 'Hello! 👋 I\'m Lyra, Events.cv\'s virtual assistant. I can help you discover events, answer questions about the platform, and more. How can I help?',
+        cv: user
+          ? 'Olá! 👋 N e Lyra, bu assistente virtual. Mod ki N pode djudá-bu oji?'
+          : 'Olá! 👋 N e Lyra, assistente virtual di Events.cv. N pode djudá-bu diskobri eventos, spondê pergunta sobri plataforma, i más. Mod ki N pode djudá?',
       };
 
       setMessages([
@@ -64,7 +70,7 @@ export function LyraWidget({ eventId, language = 'pt' }: LyraWidgetProps) {
   }, [isOpen, user, language, messages.length]);
 
   const handleSend = async () => {
-    if (!input.trim() || !user || isLoading) return;
+    if (!input.trim() || isLoading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -78,7 +84,6 @@ export function LyraWidget({ eventId, language = 'pt' }: LyraWidgetProps) {
     setIsLoading(true);
 
     try {
-      const functions = getFunctions();
       const chatFn = httpsCallable<
         { message: string; userId: string; eventId?: string; language: string },
         ChatResponse
@@ -86,7 +91,7 @@ export function LyraWidget({ eventId, language = 'pt' }: LyraWidgetProps) {
 
       const result = await chatFn({
         message: userMessage.content,
-        userId: user.uid,
+        userId: user?.uid || 'anonymous',
         eventId,
         language,
       });
@@ -173,6 +178,9 @@ export function LyraWidget({ eventId, language = 'pt' }: LyraWidgetProps) {
           window.location.href = `/events/${action.data.eventId}`;
         }
         break;
+      case 'create_account':
+        window.location.href = '/auth/register';
+        break;
     }
   };
 
@@ -183,21 +191,20 @@ export function LyraWidget({ eventId, language = 'pt' }: LyraWidgetProps) {
     }
   };
 
-  // Don't show widget if user is not logged in
-  if (!user && !loadingAuth) {
-    return null;
-  }
-
   return (
     <>
       {/* Chat Button */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 group"
+          className="fixed bottom-6 right-6 z-50 flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 group p-1"
           aria-label="Chat with Lyra"
         >
-          <MessageCircle className="w-7 h-7 text-white" />
+          <img
+            src="/images/lyra-avatar.jpg"
+            alt="Lyra"
+            className="w-full h-full rounded-full object-cover ring-2 ring-white/30"
+          />
           <span className="absolute -top-1 -right-1 flex h-4 w-4">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-accent opacity-75"></span>
             <span className="relative inline-flex rounded-full h-4 w-4 bg-brand-accent"></span>
@@ -212,9 +219,11 @@ export function LyraWidget({ eventId, language = 'pt' }: LyraWidgetProps) {
           <div className="flex items-center justify-between p-4 bg-gradient-to-r from-brand-primary to-brand-secondary">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-white" />
-                </div>
+                <img
+                  src="/images/lyra-avatar.jpg"
+                  alt="Lyra"
+                  className="w-10 h-10 rounded-full object-cover ring-2 ring-white/30"
+                />
                 <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-white"></span>
               </div>
               <div>
@@ -314,10 +323,10 @@ export function LyraWidget({ eventId, language = 'pt' }: LyraWidgetProps) {
             </div>
             <p className="text-xs text-zinc-500 mt-2 text-center">
               {language === 'pt'
-                ? 'Powered by Claude AI'
+                ? 'Powered by OpenAI GPT-4'
                 : language === 'en'
-                ? 'Powered by Claude AI'
-                : 'Powered by Claude AI'}
+                ? 'Powered by OpenAI GPT-4'
+                : 'Powered by OpenAI GPT-4'}
             </p>
           </div>
         </div>

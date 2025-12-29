@@ -26,6 +26,9 @@ import { GuestRegistrationModal } from '../../../components/events/GuestRegistra
 import { ShareEvent } from '../../../components/event/ShareEvent';
 import { AddToCalendar } from '../../../components/event/AddToCalendar';
 import { LyraWidget } from '../../../components/chat/LyraWidget';
+import { EventChatWindow } from '../../../components/chat/EventChatWindow';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '../../../lib/firebase';
 
 // Mock event data (fallback)
 const mockEventData = {
@@ -118,6 +121,7 @@ function formatShortDate(dateStr: string) {
 export default function EventDetailClient() {
   const params = useParams();
   const eventId = params.id as string;
+  const [user] = useAuthState(auth);
 
   // Fetch event data from Firebase
   const { data: firebaseEvent, isLoading, error } = useQuery({
@@ -133,6 +137,9 @@ export default function EventDetailClient() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+
+  // Check if current user is the event organizer
+  const isOrganizer = user && event.createdBy && user.uid === event.createdBy;
 
   useEffect(() => {
     setMounted(true);
@@ -383,6 +390,16 @@ export default function EventDetailClient() {
                   Ver Perfil
                   <ChevronRight className="h-4 w-4" />
                 </button>
+              </div>
+            </div>
+
+            {/* Event Chat */}
+            <div className="glass-card overflow-hidden">
+              <div className="h-[600px]">
+                <EventChatWindow
+                  eventId={eventId}
+                  isOrganizer={!!isOrganizer}
+                />
               </div>
             </div>
           </div>

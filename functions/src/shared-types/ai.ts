@@ -68,7 +68,7 @@ export interface ChatContext {
  */
 export interface AIAction {
   label: string;
-  action: 'buy_tickets' | 'show_map' | 'share' | 'add_to_calendar' | 'view_tickets' | 'contact_support' | 'view_event' | 'browse_events';
+  action: 'buy_tickets' | 'show_map' | 'share' | 'add_to_calendar' | 'view_tickets' | 'contact_support' | 'view_event' | 'browse_events' | 'create_account';
   data?: {
     eventId?: string;
     ticketTypeId?: string;

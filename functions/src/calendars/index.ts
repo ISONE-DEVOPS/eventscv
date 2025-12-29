@@ -6,6 +6,7 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { sendCalendarEventNotification } from '../notifications/email';
 import type {
   Calendar,
   CalendarSubscriber,
@@ -661,7 +662,7 @@ export const onCalendarEventCreated = onDocumentCreated(
       });
     });
 
-    // Store notifications (in production, trigger email sending here)
+    // Store notifications
     const batch = db.batch();
     notifications.forEach((notification) => {
       const notifRef = db.collection('notifications').doc();
@@ -669,6 +670,36 @@ export const onCalendarEventCreated = onDocumentCreated(
     });
 
     await batch.commit();
+
+    // Send emails to subscribers (async, don't block)
+    const emailPromises = subscribersSnapshot.docs.map(async (doc) => {
+      const subscriber = doc.data();
+
+      // Get user email
+      const userDoc = await db.collection('users').doc(subscriber.userId).get();
+      const userData = userDoc.data();
+
+      if (!userData?.email) {
+        return;
+      }
+
+      try {
+        await sendCalendarEventNotification({
+          recipientEmail: userData.email,
+          recipientName: userData.name || 'Amigo',
+          calendarName: calendar?.name || 'Calendário',
+          calendarSlug: calendar?.slug || '',
+          eventTitle: fullEvent?.title || 'Evento',
+          eventDescription: fullEvent?.shortDescription || fullEvent?.description || '',
+          eventDate: fullEvent?.startDate || new Date(),
+          eventId: eventData.eventId,
+        });
+      } catch (error) {
+        console.error(`Error sending email to ${userData.email}:`, error);
+      }
+    });
+
+    await Promise.allSettled(emailPromises);
 
     console.log(`Sent ${notifications.length} notifications for new event`);
   }
